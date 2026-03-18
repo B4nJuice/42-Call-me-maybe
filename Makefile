@@ -1,3 +1,4 @@
+PROJECT_NAME	= Call_me_maybe
 MAIN_PROGRAM	= main.py
 VENV			= .venv
 PYTHON			= python3
@@ -29,6 +30,7 @@ clean:
 	rm -rf $(LLM_VENV)
 	rm -rf $(LLM_DIST)
 	rm -rf $(LIBS)/*
+	rm -rf src/$(PROJECT_NAME).egg-info
 
 fclean: clean
 	rm -rf $(VENV)
