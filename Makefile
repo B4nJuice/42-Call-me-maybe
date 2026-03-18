@@ -9,6 +9,8 @@ V_UV			= $(VENV)/bin/uv
 V_PIP			= $(V_PYTHON) -m pip
 LIBS			= ./libs
 
+UV_CACHE_DIR	= /tmp/.uv-cache
+
 LLM_DIR			= llm_sdk
 LLM_LIB			= llm_sdk-0.1.0-py3-none-any.whl
 LLM_VENV		= $(LLM_DIR)/.venv
@@ -29,18 +31,21 @@ clean:
 	find . -type d -name ".mypy_cache" -exec rm -rf {} +
 	rm -rf $(LLM_VENV)
 	rm -rf $(LLM_DIST)
-	rm -rf $(LIBS)/*
 	rm -rf src/$(PROJECT_NAME).egg-info
 
 fclean: clean
 	rm -rf $(VENV)
+	# rm -rf $(LIBS)/llm_sdk-0.1.0-py3-none-any
+
+remove-cache:
+	rm -rf $(UV_CACHE_DIR)
 
 install: $(VENV)
 	$(V_PIP) install $(DEPENDENCIES)
-	$(V_UV) sync --project $(LLM_DIR)
-	$(V_UV) build --project $(LLM_DIR)
+	$(V_UV) sync --project $(LLM_DIR) --cache-dir $(UV_CACHE_DIR)
+	$(V_UV) build --project $(LLM_DIR) --cache-dir $(UV_CACHE_DIR)
 	mv $(LLM_LIB_PATH) $(LIBS)/
-	$(V_UV) sync
+	$(V_UV) sync --cache-dir $(UV_CACHE_DIR)
 
 $(VENV):
 	$(PYTHON) -m venv $(VENV)
@@ -57,4 +62,4 @@ lint-strict: install
 debug: install
 	$(PYTHON) -m pdb $(MAIN_PROGRAM)
 
-.PHONY: run clean fclean install lint lint-strict
+.PHONY: run clean fclean install lint lint-strict remove-cache

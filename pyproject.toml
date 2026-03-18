@@ -7,3 +7,6 @@ dependencies = [
     "mypy>=1.19.1",
 	"llm-sdk @ ${PROJECT_ROOT}/libs/llm_sdk-0.1.0-py3-none-any.whl"
 ]
+
+[tool.uv]
+link-mode = "symlink"
