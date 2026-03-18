@@ -38,6 +38,7 @@ install: $(VENV)
 	$(V_UV) sync --project $(LLM_DIR)
 	$(V_UV) build --project $(LLM_DIR)
 	mv $(LLM_LIB_PATH) $(LIBS)/
+	$(V_UV) sync
 
 $(VENV):
 	$(PYTHON) -m venv $(VENV)
