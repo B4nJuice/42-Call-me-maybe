@@ -1,5 +1,4 @@
 PROJECT_NAME	= Call_me_maybe
-MAIN_PROGRAM	= main.py
 VENV			= .venv
 PYTHON			= python3
 V_PYTHON		= $(VENV)/bin/python3
@@ -17,14 +16,14 @@ LLM_VENV		= $(LLM_DIR)/.venv
 LLM_DIST		= $(LLM_DIR)/dist
 LLM_LIB_PATH	= $(LLM_DIST)/$(LLM_LIB)
 
-SRCS			= $(MAIN_PROGRAM) ./src
+SRCS			= ./src
 
 DEPENDENCIES	= uv
 
 ARGS			?=
 
 run: install
-	$(V_PYTHON) $(MAIN_PROGRAM) $(ARGS)
+	$(V_UV) run python -B -m src $(ARGS)
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
@@ -35,7 +34,7 @@ clean:
 
 fclean: clean
 	rm -rf $(VENV)
-	# rm -rf $(LIBS)/llm_sdk-0.1.0-py3-none-any
+	rm -rf $(LIBS)/llm_sdk-0.1.0-py3-none-any
 
 remove-cache:
 	rm -rf $(UV_CACHE_DIR)

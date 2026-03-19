@@ -5,7 +5,9 @@ requires-python = ">=3.10"
 dependencies = [
     "flake8>=7.3.0",
     "mypy>=1.19.1",
-	"llm-sdk @ ${PROJECT_ROOT}/libs/llm_sdk-0.1.0-py3-none-any.whl"
+    "llm-sdk @ ${PROJECT_ROOT}/libs/llm_sdk-0.1.0-py3-none-any.whl",
+    "numpy>=2.2.6",
+    "pydantic>=2.12.5",
 ]
 
 [tool.uv]

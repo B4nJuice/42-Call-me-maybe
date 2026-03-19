@@ -1,0 +1,5 @@
+{
+	"--input": "./data/input/function_calling_tests.json",
+	"--function_definitions": "./data/input/function_definitions.json",
+	"--output": "./data/output/function_calls.json"
+}
