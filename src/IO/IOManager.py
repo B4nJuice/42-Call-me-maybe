@@ -45,7 +45,7 @@ class IOManager:
 
             if not isinstance(prompt.get("prompt"), str):
                 raise ValueError(f"Prompt {idx}: must contain a valid string.")
-            if list[prompt.keys()] != ["prompt"]:
+            if len(prompt) != 1:
                 raise ValueError(f"Prompt {idx}: contains multiple fields.")
 
         return input_data
