@@ -1,5 +1,34 @@
 import json
-from typing import Any
+import sys
+from typing import Any, Literal
+
+from pydantic import BaseModel, TypeAdapter, field_validator, ConfigDict
+
+
+class InputItem(BaseModel):
+    prompt: str
+
+    @field_validator("prompt")
+    @classmethod
+    def check_prompt(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("prompt must be a non-empty string")
+        return v
+
+
+class Parameter(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["number", "string", "boolean"]
+
+
+class FunctionDefinition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    description: str
+    parameters: dict[str, Parameter]
+    returns: Parameter
 
 
 class IOManager:
@@ -7,49 +36,50 @@ class IOManager:
         self.args_config: dict[str, str] = {}
 
     def parse_args(self) -> dict[str, str]:
-        import sys
-
         args_config: dict[str, str] = {}
 
         with open("./src/IO/args.json") as args_file:
-            json_data: str = args_file.read()
-            args_config = json.loads(json_data)
+            args_config = json.load(args_file)
 
         argv: list[str] = sys.argv[1:]
         argc: int = len(argv)
 
-        args_config_keys: list[str] = list(args_config.keys())
+        args_config_keys = list(args_config.keys())
 
-        key: str = ""
+        key = ""
         for idx, arg in enumerate(argv):
-            if not idx % 2:
+            if idx % 2 == 0:
                 if arg not in args_config_keys:
                     raise ValueError(f"{arg}: unknown parameter.")
+
                 if idx == argc - 1:
-                    raise ValueError(f"{arg}: no value gived.")
+                    raise ValueError(f"{arg}: no value given.")
+
                 key = arg
             else:
-                args_config.update({key: arg})
+                args_config[key] = arg
 
         self.args_config = args_config
+        return args_config
 
     def store_in_output(self, data: Any, mode: str = "w") -> None:
         with open(self.args_config.get("--output"), mode) as output_file:
             json.dump(data, output_file)
 
-    def get_input(self) -> list[dict[Any]]:
-        input_data: list[dict[Any]] = []
+    def get_input(self) -> list[dict[str, str]]:
         with open(self.args_config.get("--input")) as input_file:
-            input_data = json.loads(input_file.read())
-        for idx, prompt in enumerate(input_data):
+            data = json.load(input_file)
 
-            if not isinstance(prompt.get("prompt"), str):
-                raise ValueError(f"Prompt {idx}: must contain a valid string.")
-            if len(prompt) != 1:
-                raise ValueError(f"Prompt {idx}: contains multiple fields.")
+        adapter = TypeAdapter(list[InputItem])
+        adapter.validate_python(data)
 
-        return input_data
+        return data
 
-    def get_function_definitions(self) -> list[dict[Any]]:
+    def get_function_definitions(self) -> list[dict[str, Any]]:
         with open(self.args_config.get("--function_definitions")) as fd_file:
-            return json.loads(fd_file.read())
+            data = json.load(fd_file)
+
+        adapter = TypeAdapter(list[FunctionDefinition])
+        adapter.validate_python(data)
+
+        return data
