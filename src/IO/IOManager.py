@@ -55,13 +55,15 @@ class IOManager:
             required: bool = data.get("required") == 1
             default: Any = None if required else arg_type(data.get("default"))
             action: str = data.get("action")
+            nargs: int = data.get("nargs")
             parser.add_argument(
                     key,
                     alias,
                     type=arg_type,
                     required=required,
                     default=default,
-                    action=action
+                    action=action,
+                    nargs=nargs
                 )
 
         self.args_config = args_config
@@ -89,3 +91,28 @@ class IOManager:
         adapter.validate_python(data)
 
         return data
+
+    def get_function_definitions_context(self):
+        context: list[str] = []
+        function_definitions: dict[Any] = self.get_function_definitions()
+        for function in function_definitions:
+            name = function.get("name")
+            description = function.get("description")
+
+            params = function.get("parameters", {})
+            params_str = ", ".join(
+                f"{k}: {v.get('type')}" for k, v in params.items()
+            )
+
+            returns = function.get("returns", {}).get("type")
+
+            function_str = (
+                f"Function= {name}\n"
+                f"Description= {description}\n"
+                f"Parameters= {params_str}\n"
+                f"Returns= {returns}\n"
+            )
+
+            context.append(function_str)
+
+        return "\n".join(context)
