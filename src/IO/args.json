@@ -1,5 +1,23 @@
 {
-	"--input": "./data/input/function_calling_tests.json",
-	"--function_definitions": "./data/input/function_definitions.json",
-	"--output": "./data/output/function_calls.json"
+	"--input": {
+		"alias" : "-i",
+		"default": "./data/input/function_calling_tests.json",
+		"type": "str",
+		"required": 0,
+		"action": "store"
+	},
+	"--function_definitions": {
+		"alias" : "-fd",
+		"default": "./data/input/function_definitions.json",
+		"type": "str",
+		"required": 0,
+		"action": "store"
+	},
+	"--output": {
+		"alias" : "-o",
+		"default": "./data/output/function_calls.json",
+		"type": "str",
+		"required": 0,
+		"action": "store"
+	}
 }

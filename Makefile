@@ -1,7 +1,7 @@
 PROJECT_NAME	= Call_me_maybe
 VENV			= .venv
 PYTHON			= python3
-V_PYTHON		= $(VENV)/bin/python3
+V_PYTHON		= $(VENV)/bin/$(PYTHON)
 V_FLAKE			= $(VENV)/bin/flake8
 V_MYPY			= $(VENV)/bin/mypy
 V_UV			= $(VENV)/bin/uv

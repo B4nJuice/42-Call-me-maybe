@@ -3,9 +3,6 @@ def main() -> None:
 
     io_man: IOManager = IOManager()
     io_man.parse_args()
-    print(io_man.args_config)
-    print(io_man.get_input())
-    print(io_man.get_function_definitions())
 
 
 if __name__ == "__main__":
