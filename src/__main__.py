@@ -96,13 +96,16 @@ async def main() -> None:
     llm_model = LLMModel()
     prompts = list(io_man.get_input())
     is_debug = bool(io_man.args.get("debug"))
+    is_no_output = bool(io_man.args.get("no_output"))
     prompt_texts = [str(prompt.get("prompt", "")) for prompt in prompts]
     statuses = ["pending"] * len(prompt_texts)
     tokens = [0] * len(prompt_texts)
     responses = [None] * len(prompt_texts)
     errors = [None] * len(prompt_texts)
 
-    rendered_lines = _render_prompt_table(prompt_texts, statuses, tokens)
+    rendered_lines = 0
+    if not is_no_output:
+        rendered_lines = _render_prompt_table(prompt_texts, statuses, tokens)
 
     for idx, prompt in enumerate(prompts):
         try:
@@ -124,31 +127,34 @@ async def main() -> None:
                 spin_idx += 1
                 tokens[idx] = executor.token
 
-                rendered_lines = _redraw_prompt_table(
-                    rendered_lines,
-                    prompt_texts,
-                    statuses,
-                    tokens,
-                    spin_char
-                )
+                if not is_no_output:
+                    rendered_lines = _redraw_prompt_table(
+                        rendered_lines,
+                        prompt_texts,
+                        statuses,
+                        tokens,
+                        spin_char
+                    )
 
                 await asyncio.sleep(0.1)
 
             tokens[idx] = executor.token
             statuses[idx] = "done"
             responses[idx] = executor.prompt_response
-            rendered_lines = _redraw_prompt_table(
-                rendered_lines, prompt_texts, statuses, tokens
-            )
+            if not is_no_output:
+                rendered_lines = _redraw_prompt_table(
+                    rendered_lines, prompt_texts, statuses, tokens
+                )
         except Exception as e:
             statuses[idx] = "error"
             errors[idx] = str(e)
-            rendered_lines = _redraw_prompt_table(
-                rendered_lines, prompt_texts, statuses, tokens
-            )
+            if not is_no_output:
+                rendered_lines = _redraw_prompt_table(
+                    rendered_lines, prompt_texts, statuses, tokens
+                )
             continue
 
-    if is_debug:
+    if is_debug and not is_no_output:
         print()
         for idx in range(len(prompt_texts)):
             if errors[idx] is not None:

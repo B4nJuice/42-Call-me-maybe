@@ -41,6 +41,9 @@ class IOManager:
             "str": str,
             "bool": bool,
         }
+        self.config: dict[str, str] = {}
+        self.parse_args()
+        self.get_config()
 
     def parse_args(self) -> dict[str, str]:
         args_config: dict[str, str] = {}
@@ -77,6 +80,12 @@ class IOManager:
         self.args = vars(parser.parse_args())
         return self.args
 
+    def get_config(self) -> dict[str, str]:
+        with open("./src/config/config.json") as config:
+            self.config = json.load(config)
+
+        return self.config
+
     def store_in_output(self, data: Any, mode: str = "w") -> None:
         with open(self.args_config.get("--output"), mode) as output_file:
             json.dump(data, output_file)
@@ -101,7 +110,7 @@ class IOManager:
 
     def get_function_definitions_context(self):
         context: list[str] = []
-        function_definitions: dict[Any] = self.get_function_definitions()
+        function_definitions: list[dict[str, Any]] = self.get_function_definitions()
         for function in function_definitions:
             name = function.get("name")
             description = function.get("description")

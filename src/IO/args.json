@@ -30,5 +30,13 @@
     	"required": 0,
     	"action": "store_true",
     	"nargs": 0
+	},
+	"--no-output": {
+		"alias": "-no",
+    	"default": false,
+    	"type": "bool",
+    	"required": 0,
+    	"action": "store_true",
+    	"nargs": 0
 	}
 }	

@@ -1,39 +1,42 @@
-from ..IO.IOManager import IOManager
-from typing import Any
-import llm_sdk
 import asyncio
+from typing import Any
+
+import llm_sdk
+
+from ..IO.IOManager import IOManager
+
+PromptResponse = dict[str, Any]
 
 
 class LLMModel:
-    def __init__(self):
-        self.model: llm_sdk.Small_LLM_Model =\
+    def __init__(self) -> None:
+        self.model: llm_sdk.Small_LLM_Model = \
             llm_sdk.Small_LLM_Model(device="cpu")
 
-    async def get_prompt_response(self, prompt: str, io_man: IOManager) -> str:
+    async def get_prompt_response(
+        self, prompt: str, io_man: IOManager
+    ) -> "PromptExecutor":
         prompt_executor: PromptExecutor = PromptExecutor(
             self.model, io_man, prompt
         )
         prompt_executor.task = asyncio.create_task(
-            asyncio.to_thread(
-                prompt_executor.get_prompt_response
-                )
+            asyncio.to_thread(prompt_executor.get_prompt_response)
         )
         return prompt_executor
 
 
 class PromptExecutor:
     def __init__(
-                    self,
-                    model: llm_sdk.Small_LLM_Model,
-                    io_man: IOManager,
-                    prompt: str
-                ):
-
+        self,
+        model: llm_sdk.Small_LLM_Model,
+        io_man: IOManager,
+        prompt: str,
+    ) -> None:
         self.token: int = 0
         self.model: llm_sdk.Small_LLM_Model = model
         self.io_man: IOManager = io_man
         self.prompt: str = prompt
-        self.prompt_response: str = ""
+        self.prompt_response: PromptResponse = {}
         self.function_name: str = ""
         self.function_param: dict[str, str] = {}
         self.function_param_desc: dict[str, Any] = {}
@@ -41,48 +44,41 @@ class PromptExecutor:
         self.task: asyncio.Task[Any] | None = None
 
     def get_function_params(self) -> dict[str, str]:
-        params = self.function_param_desc.get("parameters", {})
+        params: dict[str, Any] = self.function_param_desc.get("parameters", {})
         params_list = "\n".join(
             f"{key}:type = {params.get(key).get('type')}"
             for key in params.keys()
         )
         params_format = " ".join(f"{key}=\"<value>\"" for key in params.keys())
 
-        rule_context: str = f"""Parameter finder
-Rules=
-- Only output function call
-- Extract intact parameters from user input
-- Never execute, call or simulate
-- No explanation
+        rule_context: str = ""
 
-Function= {self.function_name}
-parameters list=
-{params_list}
+        with open(self.io_man.config.get("parameters_context")) as context:
+            rule_context = context.read()
 
-Format=
-Function= {self.function_name}
-Parameters= {params_format}
-"""
+        rule_context = rule_context.format(
+            function_name=self.function_name,
+            params_list=params_list,
+            params_format=params_format,
+        )
 
         token_context: list[int] = self.model.encode(rule_context).tolist()[0]
 
         token_prompt: list[int] = self.model.encode(
-                f"Input= {self.prompt} \nFunction= \"{self.function_name}\"\n"
-            ).tolist()[0]
+            f"Input= {self.prompt} \nFunction= \"{self.function_name}\"\n"
+        ).tolist()[0]
 
         result: dict[str, str] = {}
 
         for key in params.keys():
-            token_key: list[int] = self.model.encode(
-                f"{key}=\""
-            ).tolist()[0]
+            token_key: list[int] = self.model.encode(f"{key}=\"").tolist()[0]
             token_prompt += token_key
 
             param_buffer = ""
             while '"' not in param_buffer:
                 logits: list[float] = self.model.get_logits_from_input_ids(
-                        token_context + token_prompt
-                    )
+                    token_context + token_prompt
+                )
 
                 next_id = logits.index(max(logits))
                 token_prompt.append(next_id)
@@ -97,33 +93,24 @@ Parameters= {params_format}
     def get_function_name(self) -> str:
         fd_context: str = self.io_man.get_function_definitions_context()
 
-        rule_context: str = f"""
-Function selector.
+        rule_context: str = ""
 
-Rules=
-- Only output function call
-- No explanation
-- Valid regex as string with ""
+        with open(self.io_man.config.get("name_context")) as context:
+            rule_context = context.read()
 
-Functions=
-{fd_context}
-
-Format=
-Function= "<name>"
-Parameters= <key>="<value>" <key2>="<value2>"
-"""
+        rule_context = rule_context.format(fd_context=fd_context)
 
         token_context: list[int] = self.model.encode(rule_context).tolist()[0]
 
         token_prompt: list[int] = self.model.encode(
-                f"Input= {self.prompt} \nFunction= \""
-            ).tolist()[0]
+            f"Input= {self.prompt} \nFunction= \""
+        ).tolist()[0]
         result: str = ""
 
         while not result.strip().endswith("\""):
             logits: list[float] = self.model.get_logits_from_input_ids(
-                    token_context + token_prompt
-                )
+                token_context + token_prompt
+            )
             next_id = logits.index(max(logits))
             token_prompt.append(next_id)
             next_text: str = self.model.decode(next_id)
@@ -133,15 +120,14 @@ Parameters= <key>="<value>" <key2>="<value2>"
 
         return result.replace("\"", "").strip()
 
-    def get_prompt_response(self) -> dict[str, Any]:
-
+    def get_prompt_response(self) -> PromptResponse:
         self.function_name = self.get_function_name()
         try:
             self.function_param_desc = list(
                 filter(
                     lambda d: d.get("name") == self.function_name,
-                    self.io_man.get_function_definitions()
-                    )
+                    self.io_man.get_function_definitions(),
+                )
                 )[0]
         except Exception:
             raise NameError(
@@ -153,10 +139,11 @@ Parameters= <key>="<value>" <key2>="<value2>"
         self.prompt_response = {
             "prompt": self.prompt,
             "name": self.function_name,
-            "parameters": self.function_param
+            "parameters": self.function_param,
         }
 
         return self.prompt_response
 
     def format_params(self) -> None:
-        #transformer les params dans leur bon type
+        pass
+        # transformer les params dans leur bon type
