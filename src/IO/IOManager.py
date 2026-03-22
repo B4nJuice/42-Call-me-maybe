@@ -52,19 +52,26 @@ class IOManager:
         for key, data in args_config.items():
             alias: str = data.get("alias")
             arg_type: type = self.type_map.get(data.get("type"))
-            required: bool = data.get("required") == 1
-            default: Any = None if required else arg_type(data.get("default"))
             action: str = data.get("action")
+            required: bool = data.get("required") == 1
             nargs: int = data.get("nargs")
-            parser.add_argument(
-                    key,
-                    alias,
-                    type=arg_type,
-                    required=required,
-                    default=default,
-                    action=action,
-                    nargs=nargs
-                )
+
+            arg_kwargs: dict[str, Any] = {
+                "action": action,
+                "required": required,
+            }
+
+            if action in ["store_true", "store_false"]:
+                arg_kwargs["default"] = bool(data.get("default", False))
+            else:
+                default: Any = None
+                if not required and arg_type is not None:
+                    default = arg_type(data.get("default"))
+                arg_kwargs["type"] = arg_type
+                arg_kwargs["default"] = default
+                arg_kwargs["nargs"] = nargs
+
+            parser.add_argument(key, alias, **arg_kwargs)
 
         self.args_config = args_config
         self.args = vars(parser.parse_args())
@@ -107,10 +114,10 @@ class IOManager:
             returns = function.get("returns", {}).get("type")
 
             function_str = (
-                f"Function= {name}\n"
-                f"Description= {description}\n"
-                f"Parameters= {params_str}\n"
-                f"Returns= {returns}\n"
+                f"function_name= {name}\n"
+                f"description= {description}\n"
+                f"parameters= {params_str}\n"
+                f"returns= {returns}\n"
             )
 
             context.append(function_str)

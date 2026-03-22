@@ -22,5 +22,13 @@
 		"required": 0,
 		"action": "store",
 		"nargs": 1
+	},
+	"--debug": {
+		"alias": "-d",
+    	"default": false,
+    	"type": "bool",
+    	"required": 0,
+    	"action": "store_true",
+    	"nargs": 0
 	}
-}
+}	
