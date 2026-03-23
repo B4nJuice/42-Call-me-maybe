@@ -4,3 +4,5 @@ llm_sdk/.venv
 libs
 data/output/function_calls.json
 moulinette(1).zip
+moulinette
+moulinette/*
