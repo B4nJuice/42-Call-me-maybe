@@ -103,6 +103,8 @@ async def main() -> None:
     responses = [None] * len(prompt_texts)
     errors = [None] * len(prompt_texts)
 
+    avg = [None] * len(prompt_texts)
+
     rendered_lines = 0
     if not is_no_output:
         rendered_lines = _render_prompt_table(prompt_texts, statuses, tokens)
@@ -141,6 +143,8 @@ async def main() -> None:
             tokens[idx] = executor.token
             statuses[idx] = "done"
             responses[idx] = executor.prompt_response
+            avg[idx] = executor.avg_logits
+            io_man.store_in_output([r for r in responses if r is not None])
             if not is_no_output:
                 rendered_lines = _redraw_prompt_table(
                     rendered_lines, prompt_texts, statuses, tokens
@@ -148,6 +152,11 @@ async def main() -> None:
         except Exception as e:
             statuses[idx] = "error"
             errors[idx] = str(e)
+            responses[idx] = {
+                "prompt": prompt_texts[idx],
+                "error": str(e),
+            }
+            io_man.store_in_output([r for r in responses if r is not None])
             if not is_no_output:
                 rendered_lines = _redraw_prompt_table(
                     rendered_lines, prompt_texts, statuses, tokens
@@ -168,7 +177,7 @@ async def main() -> None:
             print(
                 colored_text(
                     [Colors.GREEN], f"✔ Result [{idx}] [{tokens[idx]}]:"
-                )
+                ), avg[idx]
             )
             print(responses[idx])
 

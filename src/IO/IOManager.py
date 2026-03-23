@@ -1,5 +1,6 @@
 import json
 import argparse
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, TypeAdapter, field_validator, ConfigDict
@@ -19,7 +20,7 @@ class InputItem(BaseModel):
 class Parameter(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    type: Literal["number", "string", "boolean"]
+    type: Literal["number", "string", "boolean", "integer"]
 
 
 class FunctionDefinition(BaseModel):
@@ -36,14 +37,18 @@ class IOManager:
         self.args_config: dict[str, dict[str, Any]] = {}
         self.args: dict[str, Any] = {}
         self.type_map: dict[str, type] = {
-            "int": int,
+            "integer": int,
             "float": float,
-            "str": str,
-            "bool": bool,
+            "string": str,
+            "boolean": bool,
         }
         self.config: dict[str, str] = {}
+        self.input: list[dict[str, str]] = []
+        self.function_definitions: list[dict[str, Any]] = []
         self.parse_args()
         self.get_config()
+        self.get_input()
+        self.get_function_definitions()
 
     def parse_args(self) -> dict[str, str]:
         args_config: dict[str, str] = {}
@@ -71,7 +76,7 @@ class IOManager:
                 if not required and arg_type is not None:
                     default = arg_type(data.get("default"))
                 arg_kwargs["type"] = arg_type
-                arg_kwargs["default"] = default
+                arg_kwargs["default"] = [default]
                 arg_kwargs["nargs"] = nargs
 
             parser.add_argument(key, alias, **arg_kwargs)
@@ -86,32 +91,39 @@ class IOManager:
 
         return self.config
 
-    def store_in_output(self, data: Any, mode: str = "w") -> None:
-        with open(self.args_config.get("--output"), mode) as output_file:
-            json.dump(data, output_file)
+    def store_in_output(self, data: Any, mode: str = "w+") -> None:
+        output_path_str: str | None = self.args.get("output")[0]
+
+        output_path = Path(output_path_str)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_path, mode) as output_file:
+            json.dump(data, output_file, indent="\t", ensure_ascii=False)
+            output_file.write("\n")
 
     def get_input(self) -> list[dict[str, str]]:
-        with open(self.args.get("input")) as input_file:
+        with open(self.args.get("input")[0]) as input_file:
             data = json.load(input_file)
 
         adapter = TypeAdapter(list[InputItem])
         adapter.validate_python(data)
 
-        return data
+        self.input = data
+        return self.input
 
     def get_function_definitions(self) -> list[dict[str, Any]]:
-        with open(self.args.get("function_definitions")) as fd_file:
+        with open(self.args.get("function_definitions")[0]) as fd_file:
             data = json.load(fd_file)
 
         adapter = TypeAdapter(list[FunctionDefinition])
         adapter.validate_python(data)
 
-        return data
+        self.function_definitions = data
+        return self.function_definitions
 
     def get_function_definitions_context(self):
         context: list[str] = []
-        function_definitions: list[dict[str, Any]] = self.get_function_definitions()
-        for function in function_definitions:
+        for function in self.function_definitions:
             name = function.get("name")
             description = function.get("description")
 

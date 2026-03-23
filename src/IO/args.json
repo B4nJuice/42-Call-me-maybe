@@ -2,7 +2,7 @@
 	"--input": {
 		"alias" : "-i",
 		"default": "./data/input/function_calling_tests.json",
-		"type": "str",
+		"type": "string",
 		"required": 0,
 		"action": "store",
 		"nargs": 1
@@ -10,7 +10,7 @@
 	"--function_definitions": {
 		"alias" : "-fd",
 		"default": "./data/input/function_definitions.json",
-		"type": "str",
+		"type": "string",
 		"required": 0,
 		"action": "store",
 		"nargs": 1
@@ -18,7 +18,7 @@
 	"--output": {
 		"alias" : "-o",
 		"default": "./data/output/function_calls.json",
-		"type": "str",
+		"type": "string",
 		"required": 0,
 		"action": "store",
 		"nargs": 1
@@ -26,7 +26,7 @@
 	"--debug": {
 		"alias": "-d",
     	"default": false,
-    	"type": "bool",
+    	"type": "boolean",
     	"required": 0,
     	"action": "store_true",
     	"nargs": 0
@@ -34,7 +34,7 @@
 	"--no-output": {
 		"alias": "-no",
     	"default": false,
-    	"type": "bool",
+    	"type": "boolean",
     	"required": 0,
     	"action": "store_true",
     	"nargs": 0

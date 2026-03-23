@@ -31,6 +31,7 @@ clean:
 	rm -rf $(LLM_VENV)
 	rm -rf $(LLM_DIST)
 	rm -rf src/$(PROJECT_NAME).egg-info
+	rm -rf data/output
 
 fclean: clean
 	rm -rf $(VENV)

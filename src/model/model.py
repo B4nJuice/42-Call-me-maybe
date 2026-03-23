@@ -38,9 +38,10 @@ class PromptExecutor:
         self.prompt: str = prompt
         self.prompt_response: PromptResponse = {}
         self.function_name: str = ""
-        self.function_param: dict[str, str] = {}
+        self.function_param: dict[str, Any] = {}
         self.function_param_desc: dict[str, Any] = {}
         self.is_finished: bool = False
+        self.avg_logits: int = 0
         self.task: asyncio.Task[Any] | None = None
 
     def get_function_params(self) -> dict[str, str]:
@@ -86,7 +87,7 @@ class PromptExecutor:
                 param_buffer += next_text.replace("\n", "")
 
                 self.token += 1
-            result[key] = param_buffer.split('"', maxsplit=1)[0]
+            result[key] = param_buffer.split('"', maxsplit=1)[0].strip()
 
         return result
 
@@ -107,16 +108,26 @@ class PromptExecutor:
         ).tolist()[0]
         result: str = ""
 
+        name_logits: list[float] = []
+
         while not result.strip().endswith("\""):
             logits: list[float] = self.model.get_logits_from_input_ids(
                 token_context + token_prompt
             )
-            next_id = logits.index(max(logits))
+            max_logit: float = max(logits)
+            name_logits.append(max_logit)
+            next_id: int = logits.index(max_logit)
             token_prompt.append(next_id)
             next_text: str = self.model.decode(next_id)
             result += next_text
 
             self.token += 1
+
+        self.avg_logits = sum(name_logits) / self.token
+        if self.avg_logits < 27.8:
+            raise ValueError(
+                f"Confidence ({self.avg_logits:.2f}) is below the threshold."
+            )
 
         return result.replace("\"", "").strip()
 
@@ -126,7 +137,7 @@ class PromptExecutor:
             self.function_param_desc = list(
                 filter(
                     lambda d: d.get("name") == self.function_name,
-                    self.io_man.get_function_definitions(),
+                    self.io_man.function_definitions,
                 )
                 )[0]
         except Exception:
@@ -135,6 +146,7 @@ class PromptExecutor:
             )
 
         self.function_param = self.get_function_params()
+        self.format_params()
 
         self.prompt_response = {
             "prompt": self.prompt,
@@ -142,8 +154,50 @@ class PromptExecutor:
             "parameters": self.function_param,
         }
 
+        self.is_finished = True
+
         return self.prompt_response
 
     def format_params(self) -> None:
-        pass
-        # transformer les params dans leur bon type
+        params_schema: dict[str, Any] = self.function_param_desc.get(
+            "parameters", {}
+        )
+        formatted_params: dict[str, Any] = {}
+
+        for key, value in self.function_param.items():
+            param_type: str | None = params_schema.get(key, {}).get("type")
+            if param_type is None:
+                raise ValueError(f"Unsupported parameter type: {param_type}")
+
+            if param_type == "boolean":
+                normalized = str(value).strip().lower()
+                if normalized in {"true", "1", "yes", "y", "on"}:
+                    formatted_params[key] = True
+                elif normalized in {"false", "0", "no", "n", "off"}:
+                    formatted_params[key] = False
+                else:
+                    raise ValueError(
+                        f"Invalid boolean value for '{key}': {value}"
+                    )
+            else:
+                casters: dict[str, Any] = {
+                    "number": float,
+                    "integer": int,
+                    "string": str,
+                    "boolean": bool,
+                }
+                caster = casters.get(param_type)
+
+                if caster is None:
+                    raise ValueError(
+                        f"Unsupported parameter type: {param_type}"
+                    )
+
+                try:
+                    formatted_params[key] = caster(value)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(
+                        f"Invalid value for '{key}' ({param_type}): {value}"
+                    ) from exc
+
+        self.function_param = formatted_params
