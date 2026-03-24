@@ -2,6 +2,7 @@ import asyncio
 from typing import Any
 
 import llm_sdk
+import numpy as np
 
 from ..IO.IOManager import IOManager
 
@@ -10,8 +11,7 @@ PromptResponse = dict[str, Any]
 
 class LLMModel:
     def __init__(self) -> None:
-        self.model: llm_sdk.Small_LLM_Model = \
-            llm_sdk.Small_LLM_Model(device="cpu")
+        self.model: llm_sdk.Small_LLM_Model = llm_sdk.Small_LLM_Model()
 
     async def get_prompt_response(
         self, prompt: str, io_man: IOManager
@@ -80,8 +80,8 @@ class PromptExecutor:
                 logits: list[float] = self.model.get_logits_from_input_ids(
                     token_context + token_prompt
                 )
-
-                next_id = logits.index(max(logits))
+                logits_arr = np.asarray(logits)
+                next_id = int(np.argmax(logits_arr))
                 token_prompt.append(next_id)
                 next_text: str = self.model.decode(next_id)
                 param_buffer += next_text.replace("\n", "")
@@ -114,9 +114,10 @@ class PromptExecutor:
             logits: list[float] = self.model.get_logits_from_input_ids(
                 token_context + token_prompt
             )
-            max_logit: float = max(logits)
+            logits_arr = np.asarray(logits)
+            max_logit: float = float(np.max(logits_arr))
             name_logits.append(max_logit)
-            next_id: int = logits.index(max_logit)
+            next_id: int = int(np.argmax(logits_arr))
             token_prompt.append(next_id)
             next_text: str = self.model.decode(next_id)
             result += next_text
@@ -124,7 +125,7 @@ class PromptExecutor:
             self.token += 1
 
         self.avg_logits = sum(name_logits) / self.token
-        if self.avg_logits < 27.8:
+        if self.avg_logits < 24:
             raise ValueError(
                 f"Confidence ({self.avg_logits:.2f}) is below the threshold."
             )
