@@ -125,7 +125,7 @@ class PromptExecutor:
             self.token += 1
 
         self.avg_logits = sum(name_logits) / self.token
-        if self.avg_logits < 24:
+        if self.avg_logits < 22:
             raise ValueError(
                 f"Confidence ({self.avg_logits:.2f}) is below the threshold."
             )
