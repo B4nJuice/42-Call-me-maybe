@@ -1,9 +1,9 @@
-import json
 import argparse
+import json
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, TypeAdapter, field_validator, ConfigDict
+from pydantic import BaseModel, ConfigDict, TypeAdapter, field_validator
 
 
 class InputItem(BaseModel):
@@ -33,10 +33,10 @@ class FunctionDefinition(BaseModel):
 
 
 class IOManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self.args_config: dict[str, dict[str, Any]] = {}
         self.args: dict[str, Any] = {}
-        self.type_map: dict[str, type] = {
+        self.type_map: dict[str, type[Any]] = {
             "integer": int,
             "float": float,
             "string": str,
@@ -50,19 +50,20 @@ class IOManager:
         self.get_input()
         self.get_function_definitions()
 
-    def parse_args(self) -> dict[str, str]:
-        args_config: dict[str, str] = {}
+    def parse_args(self) -> dict[str, Any]:
+        args_config: dict[str, dict[str, Any]] = {}
         parser = argparse.ArgumentParser()
 
-        with open("./src/IO/args.json") as args_file:
+        args_path: Path = Path(__file__).with_name("args.json")
+        with open(args_path) as args_file:
             args_config = json.load(args_file)
 
         for key, data in args_config.items():
-            alias: str = data.get("alias")
-            arg_type: type = self.type_map.get(data.get("type"))
-            action: str = data.get("action")
+            alias: str | None = data.get("alias")
+            arg_type: type[Any] | None = self.type_map.get(data.get("type"))
+            action: str | None = data.get("action")
             required: bool = data.get("required") == 1
-            nargs: int = data.get("nargs")
+            nargs: Any = data.get("nargs")
 
             arg_kwargs: dict[str, Any] = {
                 "action": action,
@@ -79,7 +80,10 @@ class IOManager:
                 arg_kwargs["default"] = [default]
                 arg_kwargs["nargs"] = nargs
 
-            parser.add_argument(key, alias, **arg_kwargs)
+            if alias is None:
+                parser.add_argument(key, **arg_kwargs)
+            else:
+                parser.add_argument(key, alias, **arg_kwargs)
 
         self.args_config = args_config
         self.args = vars(parser.parse_args())
@@ -93,6 +97,8 @@ class IOManager:
 
     def store_in_output(self, data: Any, mode: str = "w+") -> None:
         output_path_str: str | None = self.args.get("output")[0]
+        if output_path_str is None:
+            raise ValueError("Missing output path in arguments")
 
         output_path = Path(output_path_str)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -121,7 +127,7 @@ class IOManager:
         self.function_definitions = data
         return self.function_definitions
 
-    def get_function_definitions_context(self):
+    def get_function_definitions_context(self) -> str:
         context: list[str] = []
         for function in self.function_definitions:
             name = function.get("name")
