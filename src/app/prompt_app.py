@@ -2,7 +2,7 @@ import asyncio
 from typing import Any
 
 from ..io.io_manager import IOManager
-from ..services.llm_model_service import LLMModel
+from ..model.model import LLMModel
 from ..ui.prompt_table import PromptTableRenderer
 from ..ui.terminal import Colors, TerminalStyler
 
@@ -24,7 +24,6 @@ class PromptApplication:
         ]
         responses: list[dict[str, Any] | None] = [None] * len(prompt_texts)
         errors: list[str | None] = [None] * len(prompt_texts)
-        avg_logits: list[float | None] = [None] * len(prompt_texts)
 
         table_renderer: PromptTableRenderer = PromptTableRenderer(prompt_texts)
         if not is_no_output:
@@ -60,9 +59,12 @@ class PromptApplication:
                 table_renderer.set_token(idx, executor.token)
                 table_renderer.set_status(idx, "done")
                 responses[idx] = executor.prompt_response
-                avg_logits[idx] = executor.avg_logits
                 self.io_manager.store_in_output(
-                    [response for response in responses if response is not None]
+                    [
+                        response
+                        for response in responses
+                        if response is not None
+                    ]
                 )
 
                 if not is_no_output:
@@ -75,7 +77,11 @@ class PromptApplication:
                     "error": str(exc),
                 }
                 self.io_manager.store_in_output(
-                    [response for response in responses if response is not None]
+                    [
+                        response
+                        for response in responses
+                        if response is not None
+                    ]
                 )
                 if not is_no_output:
                     table_renderer.redraw()
@@ -86,7 +92,6 @@ class PromptApplication:
                 errors=errors,
                 responses=responses,
                 tokens=table_renderer.tokens,
-                avg_logits=avg_logits,
             )
 
     def _print_debug_results(
@@ -94,7 +99,6 @@ class PromptApplication:
         errors: list[str | None],
         responses: list[dict[str, Any] | None],
         tokens: list[int],
-        avg_logits: list[float | None],
     ) -> None:
         print()
         for idx in range(len(tokens)):
@@ -111,7 +115,6 @@ class PromptApplication:
                 TerminalStyler.colored_text(
                     [Colors.GREEN],
                     f"✔ Result [{idx}] [{tokens[idx]}]:",
-                ),
-                avg_logits[idx],
+                )
             )
             print(responses[idx])

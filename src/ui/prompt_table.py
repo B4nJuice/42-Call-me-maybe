@@ -31,7 +31,8 @@ class PromptTableRenderer:
         header_prompt: str = "PROMPT"
 
         header_plain: str = (
-            f"{header_id} | {header_status} | {header_tokens} | {header_prompt}"
+            f"{header_id} | {header_status}\
+ | {header_tokens} | {header_prompt}"
         )
         header: str = (
             f"{TerminalStyler.colored_text([Colors.BOLD], header_id)} | "
@@ -48,7 +49,9 @@ class PromptTableRenderer:
             status_name: str = self.statuses[idx]
             status: str = self._format_status(status_name, spin_char)
             token_value: str = (
-                "-" if self.statuses[idx] == "pending" else str(self.tokens[idx])
+                "-" if (
+                        self.statuses[idx] == "pending"
+                    ) else str(self.tokens[idx])
             )
 
             status_colors: dict[str, list[Colors]] = {
