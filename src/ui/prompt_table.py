@@ -1,4 +1,4 @@
-from .terminal import Colors, TerminalStyler
+from ..utils.terminal import Colors, TerminalStyler
 
 
 class PromptTableRenderer:

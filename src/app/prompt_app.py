@@ -4,7 +4,7 @@ from typing import Any
 from ..io.io_manager import IOManager
 from ..model.model import LLMModel
 from ..ui.prompt_table import PromptTableRenderer
-from ..ui.terminal import Colors, TerminalStyler
+from ..utils.terminal import Colors, TerminalStyler
 
 
 class PromptApplication:
