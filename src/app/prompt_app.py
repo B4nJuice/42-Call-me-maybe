@@ -1,11 +1,11 @@
 import asyncio
 from typing import Any
-from pydantic import BaseModel
 
 from ..io.io_manager import IOManager
 from ..model.model import LLMModel
 from ..ui.prompt_table import PromptTableRenderer
 from ..utils.terminal import Colors, TerminalStyler
+from ..utils.function_executor import FunctionExecutor
 
 
 class PromptApplication:
@@ -18,6 +18,8 @@ class PromptApplication:
             )
 
     async def run(self) -> None:
+        FunctionExecutor(io_man=self.io_manager).execute_function("fn_add_numbers",{"a": 10, "b": 5})
+        return
         prompts: list[dict[str, str]] = list(self.io_manager.get_input())
         is_debug: bool = bool(self.io_manager.args.get("debug"))
         is_no_output: bool = bool(self.io_manager.args.get("no_output"))

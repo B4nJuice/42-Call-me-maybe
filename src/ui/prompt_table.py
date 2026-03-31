@@ -1,6 +1,6 @@
 from ..utils.terminal import Colors, TerminalStyler
 from typing import Any
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel
 
 
 class PromptTableRenderer(BaseModel):

@@ -39,6 +39,14 @@
 		"action": "store",
 		"nargs": 1
 	},
+	"--function-path": {
+		"alias" : "-fp",
+		"default": "./src/default_functions/default_functions.py",
+		"type": "string",
+		"required": 0,
+		"action": "store",
+		"nargs": 1
+	},
 	"--confidence": {
 		"alias" : "-c",
 		"default": 22,

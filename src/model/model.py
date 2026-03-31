@@ -37,7 +37,7 @@ class LLMModel(BaseModel):
 
 
 class PromptExecutor(BaseModel):
-    model_config = {"arbitrary_types_allowed":True}
+    model_config = {"arbitrary_types_allowed": True}
 
     model: llm_sdk.Small_LLM_Model
     io_man: IOManager
