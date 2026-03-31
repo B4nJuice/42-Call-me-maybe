@@ -1,12 +1,17 @@
 from ..utils.terminal import Colors, TerminalStyler
+from pydantic import BaseModel, PrivateAttr
 
 
-class PromptTableRenderer:
-    def __init__(self, prompt_texts: list[str]) -> None:
-        self.prompt_texts: list[str] = prompt_texts
-        self.statuses: list[str] = ["pending"] * len(prompt_texts)
-        self.tokens: list[int] = [0] * len(prompt_texts)
-        self.rendered_lines: int = 0
+class PromptTableRenderer(BaseModel):
+    prompt_texts: list[str]
+    statuses: list[str] = ["pending"]
+    tokens: list[int] = [0]
+    rendered_lines: int = 0
+
+    def model_post_init(self, __context):
+        self.statuses = ["pending"] * len(self.prompt_texts)
+        self.tokens = [0] * len(self.prompt_texts)
+        self.rendered_lines = 0
 
     def set_status(self, index: int, status: str) -> None:
         self.statuses[index] = status

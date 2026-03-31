@@ -26,7 +26,9 @@ class LLMModel(BaseModel):
         self, prompt: str, io_man: IOManager
     ) -> "PromptExecutor":
         prompt_executor: PromptExecutor = PromptExecutor(
-            self.model, io_man, prompt
+            model=self.model,
+            io_man=io_man,
+            prompt=prompt
         )
         prompt_executor.task = asyncio.create_task(
             asyncio.to_thread(prompt_executor.get_prompt_response)
@@ -35,10 +37,13 @@ class LLMModel(BaseModel):
 
 
 class PromptExecutor(BaseModel):
+    model_config = {"arbitrary_types_allowed":True}
+
     model: llm_sdk.Small_LLM_Model
     io_man: IOManager
-    prompt: str = prompt
+    prompt: str
 
+    token: int = 0
     prompt_response: dict[str, Any] = {}
     function_name: str = ""
     function_param: dict[str, str | int | float | bool] = {}
@@ -46,24 +51,6 @@ class PromptExecutor(BaseModel):
     is_finished: bool = False
     avg_logits: float = 0.0
     task: asyncio.Task[Any] | None = None
-
-    # def __init__(
-    #     self,
-    #     model: llm_sdk.Small_LLM_Model,
-    #     io_man: IOManager,
-    #     prompt: str,
-    # ) -> None:
-    #     self.token: int = 0
-    #     self.model: llm_sdk.Small_LLM_Model = model
-    #     self.io_man: IOManager = io_man
-    #     self.prompt: str = prompt
-    #     self.prompt_response: dict[str, Any] = {}
-    #     self.function_name: str = ""
-    #     self.function_param: dict[str, str | int | float | bool] = {}
-    #     self.function_param_desc: dict[str, Any] = {}
-    #     self.is_finished: bool = False
-    #     self.avg_logits: float = 0.0
-    #     self.task: asyncio.Task[Any] | None = None
 
     def get_function_params(self) -> dict[str, str]:
         params: dict[str, Any] = self.function_param_desc.get("parameters", {})

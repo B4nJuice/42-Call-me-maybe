@@ -28,7 +28,9 @@ class PromptApplication:
         responses: list[dict[str, Any] | None] = [None] * len(prompt_texts)
         errors: list[str | None] = [None] * len(prompt_texts)
 
-        table_renderer: PromptTableRenderer = PromptTableRenderer(prompt_texts)
+        table_renderer: PromptTableRenderer = PromptTableRenderer(
+                prompt_texts=prompt_texts
+            )
         if not is_no_output:
             table_renderer.render()
 
