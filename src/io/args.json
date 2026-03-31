@@ -47,6 +47,14 @@
 		"action": "store",
 		"nargs": 1
 	},
+	"--max-token": {
+		"alias" : "-mt",
+		"default": 60,
+		"type": "integer",
+		"required": 0,
+		"action": "store",
+		"nargs": 1
+	},
 	"--debug": {
 		"alias": "-d",
     	"default": false,

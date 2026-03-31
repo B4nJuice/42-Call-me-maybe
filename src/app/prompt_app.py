@@ -74,12 +74,12 @@ class PromptApplication:
 
                 if not is_no_output:
                     table_renderer.redraw()
-            except Exception as exc:
+            except Exception as e:
                 table_renderer.set_status(idx, "error")
-                errors[idx] = str(exc)
+                errors[idx] = str(e)
                 responses[idx] = {
                     "prompt": prompt_texts[idx],
-                    "error": str(exc),
+                    "error": str(e),
                 }
                 self.io_manager.store_in_output(
                     [

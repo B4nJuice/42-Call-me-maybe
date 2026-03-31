@@ -101,6 +101,10 @@ class PromptExecutor(BaseModel):
                 param_buffer += next_text.replace("\n", "")
 
                 self.token += 1
+                if self.token > self.io_man.args.get("max_token")[0]:
+                    raise ValueError(
+                        "Response failed to respond in max-token."
+                    )
             result[key] = param_buffer.split('"', maxsplit=1)[0].strip()
 
         return result
@@ -141,10 +145,10 @@ class PromptExecutor(BaseModel):
             self.token += 1
 
         self.avg_logits = sum(name_logits) / self.token
-        if self.avg_logits < self.io_man.args.get("confidence")[0]:
-            raise ValueError(
-                f"Confidence ({self.avg_logits:.2f}) is below the threshold."
-            )
+        # if self.avg_logits < self.io_man.args.get("confidence")[0]:
+        #     raise ValueError(
+        #         f"Confidence ({self.avg_logits:.2f}) is below the threshold."
+        #     )
 
         return result.replace('"', "").strip()
 

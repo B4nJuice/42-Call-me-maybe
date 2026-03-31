@@ -1,4 +1,5 @@
 from ..utils.terminal import Colors, TerminalStyler
+from typing import Any
 from pydantic import BaseModel, PrivateAttr
 
 
@@ -6,11 +7,13 @@ class PromptTableRenderer(BaseModel):
     prompt_texts: list[str]
     statuses: list[str] = ["pending"]
     tokens: list[int] = [0]
+    results: list[Any] = [None]
     rendered_lines: int = 0
 
     def model_post_init(self, __context):
         self.statuses = ["pending"] * len(self.prompt_texts)
         self.tokens = [0] * len(self.prompt_texts)
+        self.results = [None] * len(self.prompt_texts)
         self.rendered_lines = 0
 
     def set_status(self, index: int, status: str) -> None:
@@ -43,7 +46,7 @@ class PromptTableRenderer(BaseModel):
             f"{TerminalStyler.colored_text([Colors.BOLD], header_id)} | "
             f"{TerminalStyler.colored_text([Colors.BOLD], header_status)} | "
             f"{TerminalStyler.colored_text([Colors.BOLD], header_tokens)} | "
-            f"{TerminalStyler.colored_text([Colors.BOLD], header_prompt)}"
+            f"{TerminalStyler.colored_text([Colors.BOLD], header_prompt)} | "
         )
         separator: str = "-" * len(header_plain)
 
