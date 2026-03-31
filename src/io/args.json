@@ -23,6 +23,30 @@
 		"action": "store",
 		"nargs": 1
 	},
+	"--model": {
+		"alias" : "-m",
+		"default": "Qwen/Qwen3-0.6B",
+		"type": "string",
+		"required": 0,
+		"action": "store",
+		"nargs": 1
+	},
+	"--device": {
+		"alias" : "-dv",
+		"default": "cpu",
+		"type": "string",
+		"required": 0,
+		"action": "store",
+		"nargs": 1
+	},
+	"--confidence": {
+		"alias" : "-c",
+		"default": 22,
+		"type": "integer",
+		"required": 0,
+		"action": "store",
+		"nargs": 1
+	},
 	"--debug": {
 		"alias": "-d",
     	"default": false,

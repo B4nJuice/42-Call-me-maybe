@@ -1,15 +1,26 @@
 import asyncio
 from typing import Any
-
+from pydantic import BaseModel, PrivateAttr
 import llm_sdk
 import numpy as np
 
 from ..io.io_manager import IOManager
 
 
-class LLMModel:
-    def __init__(self) -> None:
-        self.model: llm_sdk.Small_LLM_Model = llm_sdk.Small_LLM_Model()
+class LLMModel(BaseModel):
+    model_name: str = "Qwen/Qwen3-0.6B"
+    device: str | None = None
+    _model: llm_sdk.Small_LLM_Model = PrivateAttr()
+
+    def model_post_init(self, __context):
+        self._model = llm_sdk.Small_LLM_Model(
+            model_name=self.model_name,
+            device=self.device
+        )
+
+    @property
+    def model(self):
+        return self._model
 
     async def get_prompt_response(
         self, prompt: str, io_man: IOManager
@@ -23,24 +34,26 @@ class LLMModel:
         return prompt_executor
 
 
-class PromptExecutor:
-    def __init__(
-        self,
-        model: llm_sdk.Small_LLM_Model,
-        io_man: IOManager,
-        prompt: str,
-    ) -> None:
-        self.token: int = 0
-        self.model: llm_sdk.Small_LLM_Model = model
-        self.io_man: IOManager = io_man
-        self.prompt: str = prompt
-        self.prompt_response: dict[str, Any] = {}
-        self.function_name: str = ""
-        self.function_param: dict[str, str | int | float | bool] = {}
-        self.function_param_desc: dict[str, Any] = {}
-        self.is_finished: bool = False
-        self.avg_logits: float = 0.0
-        self.task: asyncio.Task[Any] | None = None
+class PromptExecutor(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    model: llm_sdk.Small_LLM_Model
+    io_man: IOManager
+    prompt: str
+
+    token: int = 0
+    prompt_response: dict[str, Any] = {}
+    function_name: str = ""
+    function_param: dict[str, str | int | float | bool] = {}
+    function_param_desc: dict[str, Any] = {}
+    is_finished: bool = False
+    avg_logits: float = 0.0
+
+    _task: asyncio.Task[Any] = PrivateAttr()
+
+    @property
+    def task(self):
+        return self._task
 
     def get_function_params(self) -> dict[str, str]:
         params: dict[str, Any] = self.function_param_desc.get("parameters", {})
@@ -131,7 +144,7 @@ class PromptExecutor:
             self.token += 1
 
         self.avg_logits = sum(name_logits) / self.token
-        if self.avg_logits < 22:
+        if self.avg_logits < self.io_man.args.get("confidence")[0]:
             raise ValueError(
                 f"Confidence ({self.avg_logits:.2f}) is below the threshold."
             )

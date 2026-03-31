@@ -1,5 +1,6 @@
 import asyncio
 from typing import Any
+from pydantic import BaseModel
 
 from ..io.io_manager import IOManager
 from ..model.model import LLMModel
@@ -10,11 +11,13 @@ from ..utils.terminal import Colors, TerminalStyler
 class PromptApplication:
     def __init__(self) -> None:
         self.io_manager: IOManager = IOManager()
-        self.llm_model: LLMModel = LLMModel()
+        self.io_manager.parse_args()
+        self.llm_model: LLMModel = LLMModel(
+                model_name=self.io_manager.args.get("model")[0],
+                device=self.io_manager.args.get("device")[0]
+            )
 
     async def run(self) -> None:
-        self.io_manager.parse_args()
-
         prompts: list[dict[str, str]] = list(self.io_manager.get_input())
         is_debug: bool = bool(self.io_manager.args.get("debug"))
         is_no_output: bool = bool(self.io_manager.args.get("no_output"))
