@@ -78,5 +78,13 @@
     	"required": 0,
     	"action": "store_true",
     	"nargs": 0
+	},
+	"--execute-functions": {
+		"alias": "-ef",
+    	"default": false,
+    	"type": "boolean",
+    	"required": 0,
+    	"action": "store_true",
+    	"nargs": 0
 	}
 }	

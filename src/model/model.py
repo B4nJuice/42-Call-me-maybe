@@ -46,7 +46,7 @@ class PromptExecutor(BaseModel):
     token: int = 0
     prompt_response: dict[str, Any] = {}
     function_name: str = ""
-    function_param: dict[str, str | int | float | bool] = {}
+    function_params: dict[str, str | int | float | bool] = {}
     function_param_desc: dict[str, Any] = {}
     is_finished: bool = False
     avg_logits: float = 0.0
@@ -145,10 +145,10 @@ class PromptExecutor(BaseModel):
             self.token += 1
 
         self.avg_logits = sum(name_logits) / self.token
-        # if self.avg_logits < self.io_man.args.get("confidence")[0]:
-        #     raise ValueError(
-        #         f"Confidence ({self.avg_logits:.2f}) is below the threshold."
-        #     )
+        if self.avg_logits < self.io_man.args.get("confidence")[0]:
+            raise ValueError(
+                f"Confidence ({self.avg_logits:.2f}) is below the threshold."
+            )
 
         return result.replace('"', "").strip()
 
@@ -165,13 +165,13 @@ class PromptExecutor(BaseModel):
                 f"Failed to find a function ({self.function_name})"
             ) from exc
 
-        self.function_param = self.get_function_params()
+        self.function_params = self.get_function_params()
         self.format_params()
 
         self.prompt_response = {
             "prompt": self.prompt,
             "name": self.function_name,
-            "parameters": self.function_param,
+            "parameters": self.function_params,
         }
 
         self.is_finished = True
@@ -184,7 +184,7 @@ class PromptExecutor(BaseModel):
         )
         formatted_params: dict[str, str | int | float | bool] = {}
 
-        for key, value in self.function_param.items():
+        for key, value in self.function_params.items():
             param_type: str | None = params_schema.get(key, {}).get("type")
             if param_type is None:
                 raise ValueError(f"Unsupported parameter type: {param_type}")
@@ -221,4 +221,4 @@ class PromptExecutor(BaseModel):
                         f"Invalid value for '{key}' ({param_type}): {value}"
                     ) from exc
 
-        self.function_param = formatted_params
+        self.function_params = formatted_params

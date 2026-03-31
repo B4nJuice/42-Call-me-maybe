@@ -16,19 +16,25 @@ class PromptApplication:
                 model_name=self.io_manager.args.get("model")[0],
                 device=self.io_manager.args.get("device")[0]
             )
+        self.function_executor: FunctionExecutor = (
+                FunctionExecutor(io_man=self.io_manager)
+            )
+
 
     async def run(self) -> None:
-        FunctionExecutor(io_man=self.io_manager).execute_function("fn_add_numbers",{"a": 10, "b": 5})
-        return
         prompts: list[dict[str, str]] = list(self.io_manager.get_input())
         is_debug: bool = bool(self.io_manager.args.get("debug"))
         is_no_output: bool = bool(self.io_manager.args.get("no_output"))
+        execute_function: bool = bool(
+                self.io_manager.args.get("execute_functions")
+            )
 
         prompt_texts: list[str] = [
             str(prompt.get("prompt", "")) for prompt in prompts
         ]
         responses: list[dict[str, Any] | None] = [None] * len(prompt_texts)
         errors: list[str | None] = [None] * len(prompt_texts)
+        returns: list[Any] = [None] * len(prompt_texts)
 
         table_renderer: PromptTableRenderer = PromptTableRenderer(
                 prompt_texts=prompt_texts
@@ -66,6 +72,22 @@ class PromptApplication:
                 table_renderer.set_token(idx, executor.token)
                 table_renderer.set_status(idx, "done")
                 responses[idx] = executor.prompt_response
+
+                if execute_function:
+                    try:
+                        returns[idx] = self.function_executor.execute_function(
+                            function_name=executor.function_name,
+                            params=executor.function_params
+                        )
+                        responses[idx].update(
+                            {"return": returns[idx].get("return")}
+                        )
+                        responses[idx].update(
+                            {"output": returns[idx].get("output")}
+                        )
+                    except Exception as e:
+                        returns[idx] = e
+
                 self.io_manager.store_in_output(
                     [
                         response
@@ -93,6 +115,9 @@ class PromptApplication:
                 if not is_no_output:
                     table_renderer.redraw()
                 continue
+
+        if execute_function and not is_no_output:
+            table_renderer.render_returns(returns)
 
         if is_debug and not is_no_output:
             self._print_debug_results(

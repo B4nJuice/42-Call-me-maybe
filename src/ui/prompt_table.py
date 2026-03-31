@@ -101,6 +101,88 @@ class PromptTableRenderer(BaseModel):
         print(f"\x1b[{self.rendered_lines}F", end="")
         return self.render(spin_char)
 
+    def render_returns(self, returns: list[Any]) -> None:
+        rows: list[tuple[int, dict[str, Any]]] = [
+            (idx, data)
+            for idx, data in enumerate(returns)
+            if isinstance(data, dict)
+        ]
+
+        if not rows:
+            return
+
+        index_width: int = max(2, len(str(len(self.prompt_texts) - 1)))
+        function_width: int = max(
+            8,
+            max(
+                len(str(data.get("function_name", "-")))
+                for _, data in rows
+            ),
+        )
+        return_width: int = max(
+            8,
+            max(
+                len(str(data.get("return", "-")))
+                for _, data in rows
+            ),
+        )
+
+        print()
+        print(
+            TerminalStyler.colored_text(
+                [Colors.BOLD, Colors.CYAN], "Function returns"
+            )
+        )
+
+        header_id: str = f"{'ID':<{index_width}}"
+        header_function: str = f"{'FUNCTION':<{function_width}}"
+        header_return: str = f"{'RETURN':<{return_width}}"
+        header_output: str = "OUTPUT"
+
+        header_plain: str = (
+            f"{header_id} | {header_function} | "
+            f"{header_return} | {header_output}"
+        )
+        header: str = (
+            f"{TerminalStyler.colored_text([Colors.BOLD], header_id)} | "
+            f"{TerminalStyler.colored_text([Colors.BOLD], header_function)} | "
+            f"{TerminalStyler.colored_text([Colors.BOLD], header_return)} | "
+            f"{TerminalStyler.colored_text([Colors.BOLD], header_output)}"
+        )
+        separator: str = "-" * len(header_plain)
+
+        print(header)
+        print(TerminalStyler.colored_text([Colors.CYAN], separator))
+
+        for idx, data in rows:
+            function_name: str = str(data.get("function_name", "-"))
+            return_value: str = str(data.get("return", "-"))
+            output_value: str = str(
+                    data.get("output", "")
+                ).strip().replace("\n", " | ")
+            if output_value == "":
+                output_value = "-"
+
+            colored_id: str = TerminalStyler.colored_text(
+                [Colors.MAGENTA], f"{idx:<{index_width}}"
+            )
+            colored_function: str = TerminalStyler.colored_text(
+                [Colors.CYAN], f"{function_name:<{function_width}}"
+            )
+            colored_return: str = TerminalStyler.colored_text(
+                [Colors.GREEN], f"{return_value:<{return_width}}"
+            )
+            colored_output: str = TerminalStyler.colored_text(
+                [Colors.YELLOW], output_value
+            )
+
+            print(
+                f"{colored_id} | "
+                f"{colored_function} | "
+                f"{colored_return} | "
+                f"{colored_output}"
+            )
+
     @staticmethod
     def _format_status(status: str, spin_char: str) -> str:
         if status == "running":
