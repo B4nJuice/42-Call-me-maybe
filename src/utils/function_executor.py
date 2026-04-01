@@ -28,16 +28,24 @@ class FunctionExecutor(BaseModel):
                 function_name: str,
                 params: dict[str, Any]
             ) -> Any:
+        output: io.StringIO = io.StringIO()
         try:
-            output: io.StringIO = io.StringIO()
-            
             function: callable = self.functions.__getattribute__(function_name)
-            with contextlib.redirect_stdout(output):
-                return {
-                    "function_name": function_name,
-                    "params": params,
-                    "return": function(**params),
-                    "output": output.getvalue()
-                    }
         except Exception:
             return
+        with contextlib.redirect_stdout(output):
+            function_return: Any = None
+            function_error: Exception | None = None
+            try:
+                function_return = function(**params)
+            except Exception as e:
+                function_error = e
+            return_dict: dict[str, Any] = {
+                    "function_name": function_name,
+                    "params": params,
+                    "return": function_return,
+                    "output": output.getvalue()
+                }
+            if function_error:
+                return_dict.update({"error": function_error})
+            return return_dict

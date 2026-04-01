@@ -34,7 +34,7 @@ class PromptApplication:
         ]
         responses: list[dict[str, Any] | None] = [None] * len(prompt_texts)
         errors: list[str | None] = [None] * len(prompt_texts)
-        returns: list[Any] = [None] * len(prompt_texts)
+        returns: list[Any] = [{}] * len(prompt_texts)
 
         table_renderer: PromptTableRenderer = PromptTableRenderer(
                 prompt_texts=prompt_texts
@@ -74,19 +74,17 @@ class PromptApplication:
                 responses[idx] = executor.prompt_response
 
                 if execute_function:
-                    try:
-                        returns[idx] = self.function_executor.execute_function(
-                            function_name=executor.function_name,
-                            params=executor.function_params
-                        )
+                    returns[idx] = self.function_executor.execute_function(
+                        function_name=executor.function_name,
+                        params=executor.function_params
+                    )
+                    if returns[idx]:
                         responses[idx].update(
                             {"return": returns[idx].get("return")}
                         )
                         responses[idx].update(
                             {"output": returns[idx].get("output")}
                         )
-                    except Exception as e:
-                        returns[idx] = e
 
                 self.io_manager.store_in_output(
                     [

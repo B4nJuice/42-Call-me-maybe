@@ -111,6 +111,21 @@ class PromptTableRenderer(BaseModel):
         if not rows:
             return
 
+        rows = list(
+            map(
+                lambda row: (
+                    row[0],
+                    {
+                        **row[1],
+                        "error": f'[ERROR] {row[1].get("error")}',
+                    },
+                )
+                if row[1].get("error")
+                else row,
+                rows,
+            )
+        )
+
         index_width: int = max(2, len(str(len(self.prompt_texts) - 1)))
         function_width: int = max(
             8,
@@ -122,12 +137,13 @@ class PromptTableRenderer(BaseModel):
         return_width: int = max(
             8,
             max(
-                len(str(data.get("return", "-")))
+                len(str(data.get("error", data.get("return", "-"))))
                 for _, data in rows
             ),
         )
 
         print()
+
         print(
             TerminalStyler.colored_text(
                 [Colors.BOLD, Colors.CYAN], "Function returns"
@@ -156,7 +172,7 @@ class PromptTableRenderer(BaseModel):
 
         for idx, data in rows:
             function_name: str = str(data.get("function_name", "-"))
-            return_value: str = str(data.get("return", "-"))
+            return_value: str = str(data.get("error", data.get("return", "-")))
             output_value: str = str(
                     data.get("output", "")
                 ).strip().replace("\n", " | ")
@@ -169,8 +185,13 @@ class PromptTableRenderer(BaseModel):
             colored_function: str = TerminalStyler.colored_text(
                 [Colors.CYAN], f"{function_name:<{function_width}}"
             )
+            return_colors: list[Colors] = (
+                [Colors.RED, Colors.BOLD]
+                if data.get("error")
+                else [Colors.GREEN]
+            )
             colored_return: str = TerminalStyler.colored_text(
-                [Colors.GREEN], f"{return_value:<{return_width}}"
+                return_colors, f"{return_value:<{return_width}}"
             )
             colored_output: str = TerminalStyler.colored_text(
                 [Colors.YELLOW], output_value
