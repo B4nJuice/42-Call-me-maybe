@@ -4,8 +4,7 @@ PYTHON			= python3
 V_PYTHON		= $(VENV)/bin/$(PYTHON)
 V_FLAKE			= $(VENV)/bin/flake8
 V_MYPY			= $(VENV)/bin/mypy
-V_UV			= $(VENV)/bin/uv
-V_PIP			= $(V_PYTHON) -m pip
+UV			= uv
 LIBS			= ./libs
 
 UV_CACHE_DIR	= /tmp/.uv-cache
@@ -18,12 +17,10 @@ LLM_LIB_PATH	= $(LLM_DIST)/$(LLM_LIB)
 
 SRCS			= ./src
 
-DEPENDENCIES	= uv
-
 ARGS			?=
 
 run: install
-	$(V_UV) run python -B -m src $(ARGS)
+	$(UV) run python -B -m src $(ARGS)
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
@@ -41,15 +38,13 @@ remove-cache:
 	rm -rf $(UV_CACHE_DIR)
 
 install: $(VENV)
-	$(V_PIP) install $(DEPENDENCIES)
-	$(V_UV) sync --project $(LLM_DIR) --cache-dir $(UV_CACHE_DIR)
-	$(V_UV) build --project $(LLM_DIR) --cache-dir $(UV_CACHE_DIR)
+	$(UV) sync --project $(LLM_DIR) --cache-dir $(UV_CACHE_DIR)
+	$(UV) build --project $(LLM_DIR) --cache-dir $(UV_CACHE_DIR)
 	mv $(LLM_LIB_PATH) $(LIBS)/
-	$(V_UV) sync --cache-dir $(UV_CACHE_DIR)
+	$(UV) sync --cache-dir $(UV_CACHE_DIR)
 
 $(VENV):
 	$(PYTHON) -m venv $(VENV)
-	$(V_PIP) install --upgrade pip
 
 lint: install
 	$(V_FLAKE) $(SRCS)

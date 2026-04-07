@@ -6,3 +6,4 @@ data/output/function_calls.json
 moulinette(1).zip
 moulinette
 moulinette/*
+.mypy_cache

@@ -51,7 +51,7 @@ class LLMModel(BaseModel):
 class PromptExecutor(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
-    model: LLMProtocol
+    model: Any
     io_man: IOManager
     prompt: str
 
