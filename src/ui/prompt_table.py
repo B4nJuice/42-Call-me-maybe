@@ -1,4 +1,4 @@
-from ..utils.terminal import Colors, TerminalStyler
+from src.utils.terminal import Colors, TerminalStyler
 from typing import Any
 from pydantic import BaseModel
 
@@ -10,7 +10,7 @@ class PromptTableRenderer(BaseModel):
     results: list[Any] = [None]
     rendered_lines: int = 0
 
-    def model_post_init(self, __context):
+    def model_post_init(self, __context: Any) -> None:
         self.statuses = ["pending"] * len(self.prompt_texts)
         self.tokens = [0] * len(self.prompt_texts)
         self.results = [None] * len(self.prompt_texts)

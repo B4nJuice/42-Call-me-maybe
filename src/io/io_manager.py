@@ -97,7 +97,12 @@ class IOManager(BaseModel):
 
         for key, data in args_config.items():
             alias: str | None = data.get("alias")
-            arg_type: type[Any] | None = self.type_map.get(data.get("type"))
+            type_name: Any = data.get("type")
+            arg_type: type[Any] | None = (
+                self.type_map.get(type_name)
+                if isinstance(type_name, str)
+                else None
+            )
             action: str | None = data.get("action")
             required: bool = data.get("required") == 1
             nargs: Any = data.get("nargs")
@@ -133,9 +138,12 @@ class IOManager(BaseModel):
         return self._config
 
     def store_in_output(self, data: Any, mode: str = "w+") -> None:
-        output_path_str: str | None = self.args.get("output")[0]
-        if output_path_str is None:
+        output_values: Any = self.args.get("output")
+        if not isinstance(output_values, list) or not output_values:
             raise ValueError("Missing output path in arguments")
+        output_path_str: Any = output_values[0]
+        if not isinstance(output_path_str, str):
+            raise ValueError("Output path must be a string")
 
         output_path = Path(output_path_str)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -145,7 +153,14 @@ class IOManager(BaseModel):
             output_file.write("\n")
 
     def get_input(self) -> list[dict[str, str]]:
-        with open(self.args.get("input")[0]) as input_file:
+        input_values: Any = self.args.get("input")
+        if not isinstance(input_values, list) or not input_values:
+            raise ValueError("Missing input path in arguments")
+        input_path: Any = input_values[0]
+        if not isinstance(input_path, str):
+            raise ValueError("Input path must be a string")
+
+        with open(input_path) as input_file:
             data = json.load(input_file)
 
         adapter = TypeAdapter(list[InputItem])
@@ -155,7 +170,16 @@ class IOManager(BaseModel):
         return self._input
 
     def get_function_definitions(self) -> list[dict[str, Any]]:
-        with open(self.args.get("function_definitions")[0]) as fd_file:
+        fd_values: Any = self.args.get("function_definitions")
+        if not isinstance(fd_values, list) or not fd_values:
+            raise ValueError(
+                "Missing function definitions path in arguments"
+            )
+        fd_path: Any = fd_values[0]
+        if not isinstance(fd_path, str):
+            raise ValueError("Function definitions path must be a string")
+
+        with open(fd_path) as fd_file:
             data = json.load(fd_file)
 
         adapter = TypeAdapter(list[FunctionDefinition])

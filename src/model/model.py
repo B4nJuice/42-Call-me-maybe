@@ -1,25 +1,37 @@
 import asyncio
-from typing import Any
+from typing import Any, Protocol, cast
 from pydantic import BaseModel, PrivateAttr
 import llm_sdk
 import numpy as np
 
-from ..io.io_manager import IOManager
+from src.io.io_manager import IOManager
+
+
+class LLMProtocol(Protocol):
+    def encode(self, text: str) -> Any:
+        ...
+
+    def decode(self, token_id: int) -> str:
+        ...
+
+    def get_logits_from_input_ids(self, input_ids: list[int]) -> list[float]:
+        ...
 
 
 class LLMModel(BaseModel):
     model_name: str = "Qwen/Qwen3-0.6B"
     device: str | None = None
-    _model: llm_sdk.Small_LLM_Model = PrivateAttr()
+    _model: LLMProtocol = PrivateAttr()
 
-    def model_post_init(self, __context):
-        self._model = llm_sdk.Small_LLM_Model(
+    def model_post_init(self, __context: Any) -> None:
+        model_cls = getattr(llm_sdk, "Small_LLM_Model")
+        self._model = cast(LLMProtocol, model_cls(
             model_name=self.model_name,
             device=self.device
-        )
+        ))
 
     @property
-    def model(self):
+    def model(self) -> LLMProtocol:
         return self._model
 
     async def get_prompt_response(
@@ -39,24 +51,31 @@ class LLMModel(BaseModel):
 class PromptExecutor(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
-    model: llm_sdk.Small_LLM_Model
+    model: LLMProtocol
     io_man: IOManager
     prompt: str
 
     token: int = 0
     prompt_response: dict[str, Any] = {}
     function_name: str = ""
-    function_params: dict[str, str | int | float | bool] = {}
+    function_params: dict[str, Any] = {}
     function_param_desc: dict[str, Any] = {}
     is_finished: bool = False
     avg_logits: float = 0.0
     task: asyncio.Task[Any] | None = None
 
+    def _get_arg_first(self, key: str) -> Any:
+        values: Any = self.io_man.args.get(key)
+        if not isinstance(values, list) or not values:
+            raise ValueError(f"Missing argument: {key}")
+        return values[0]
+
     def get_function_params(self) -> dict[str, str]:
         params: dict[str, Any] = self.function_param_desc.get("parameters", {})
         params_list: str = "\n".join(
-            f"{key}:type = {params.get(key).get('type')}"
-            for key in params.keys()
+            f"{key}:type = {value.get('type')}"
+            for key, value in params.items()
+            if isinstance(value, dict)
         )
         params_format: str = " ".join(
             f"{key}=\"<value>\"" for key in params.keys()
@@ -101,7 +120,9 @@ class PromptExecutor(BaseModel):
                 param_buffer += next_text.replace("\n", "")
 
                 self.token += 1
-                if self.token > self.io_man.args.get("max_token")[0]:
+                max_token_value: Any = self._get_arg_first("max_token")
+                max_token = int(max_token_value)
+                if self.token > max_token:
                     raise ValueError(
                         "Response failed to respond in max-token."
                     )
@@ -145,7 +166,9 @@ class PromptExecutor(BaseModel):
             self.token += 1
 
         self.avg_logits = sum(name_logits) / self.token
-        if self.avg_logits < self.io_man.args.get("confidence")[0]:
+        confidence_value: Any = self._get_arg_first("confidence")
+        confidence: float = float(confidence_value)
+        if self.avg_logits < confidence:
             raise ValueError(
                 f"Confidence ({self.avg_logits:.2f}) is below the threshold."
             )

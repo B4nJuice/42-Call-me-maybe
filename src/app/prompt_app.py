@@ -2,11 +2,11 @@ import asyncio
 from typing import Any
 from pydantic import BaseModel, PrivateAttr
 
-from ..io.io_manager import IOManager
-from ..model.model import LLMModel
-from ..ui.prompt_table import PromptTableRenderer
-from ..utils.terminal import Colors, TerminalStyler
-from ..utils.function_executor import FunctionExecutor
+from src.io.io_manager import IOManager
+from src.model.model import LLMModel
+from src.ui.prompt_table import PromptTableRenderer
+from src.utils.terminal import Colors, TerminalStyler
+from src.utils.function_executor import FunctionExecutor
 
 
 class PromptApplication(BaseModel):
@@ -18,9 +18,25 @@ class PromptApplication(BaseModel):
 
     def model_post_init(self, __context: Any) -> None:
         self._io_manager = IOManager()
+
+        model_values: Any = self.io_manager.args.get("model")
+        device_values: Any = self.io_manager.args.get("device")
+        if (
+            not isinstance(model_values, list)
+            or not model_values
+            or not isinstance(model_values[0], str)
+        ):
+            raise ValueError("Missing or invalid model argument")
+
+        device: str | None = None
+        if isinstance(device_values, list) and device_values:
+            first_device: Any = device_values[0]
+            if first_device is None or isinstance(first_device, str):
+                device = first_device
+
         self._llm_model = LLMModel(
-            model_name=self.io_manager.args.get("model")[0],
-            device=self.io_manager.args.get("device")[0],
+            model_name=model_values[0],
+            device=device,
         )
         self._function_executor = FunctionExecutor(io_man=self.io_manager)
 
@@ -87,6 +103,8 @@ class PromptApplication(BaseModel):
                 table_renderer.set_token(idx, executor.token)
                 table_renderer.set_status(idx, "done")
                 responses[idx] = executor.prompt_response
+                current_response: dict[str, Any] = executor.prompt_response
+                responses[idx] = current_response
 
                 if execute_function:
                     returns[idx] = self.function_executor.execute_function(
@@ -94,10 +112,10 @@ class PromptApplication(BaseModel):
                         params=executor.function_params
                     )
                     if returns[idx]:
-                        responses[idx].update(
+                        current_response.update(
                             {"return": returns[idx].get("return")}
                         )
-                        responses[idx].update(
+                        current_response.update(
                             {"output": returns[idx].get("output")}
                         )
 

@@ -12,7 +12,7 @@ def fn_greet(name: str) -> str:
     return greet
 
 
-def fn_reverse_string(s: str):
+def fn_reverse_string(s: str) -> str:
     return s[::-1]
 
 
