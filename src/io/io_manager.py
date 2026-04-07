@@ -13,23 +13,41 @@ from pydantic import (
 
 
 class InputItem(BaseModel):
+    """Represent a single input prompt item."""
+
     prompt: str
 
     @field_validator("prompt")
     @classmethod
     def check_prompt(cls, v: str) -> str:
+        """Validate that the prompt value is a non-empty string.
+
+        Parameters
+        ----------
+        v : str
+            Prompt value to validate.
+
+        Returns
+        -------
+        str
+            The validated prompt.
+        """
         if not isinstance(v, str) or not v.strip():
             raise ValueError("prompt must be a non-empty string")
         return v
 
 
 class Parameter(BaseModel):
+    """Describe a primitive parameter type used in function schemas."""
+
     model_config = ConfigDict(extra="forbid")
 
     type: Literal["number", "string", "boolean", "integer"]
 
 
 class FunctionDefinition(BaseModel):
+    """Describe a callable function schema available to the model."""
+
     model_config = ConfigDict(extra="forbid")
 
     name: str
@@ -39,6 +57,8 @@ class FunctionDefinition(BaseModel):
 
 
 class IOManager(BaseModel):
+    """Load CLI/config/input resources and handle JSON output persistence."""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     _args_config: dict[str, dict[str, Any]] = PrivateAttr(default_factory=dict)
@@ -58,6 +78,18 @@ class IOManager(BaseModel):
         )
 
     def model_post_init(self, __context: Any) -> None:
+        """Initialize runtime state from CLI args and input files.
+
+        Parameters
+        ----------
+        __context : Any
+            Pydantic post-init context.
+
+        Returns
+        -------
+        None
+            Populates internal configuration and datasets.
+        """
         self.parse_args()
         self.get_config()
         self.get_input()
@@ -65,29 +97,78 @@ class IOManager(BaseModel):
 
     @property
     def args_config(self) -> dict[str, dict[str, Any]]:
+        """Return CLI argument configuration metadata.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]
+            Parsed argument configuration loaded from args.json.
+        """
         return self._args_config
 
     @property
     def args(self) -> dict[str, Any]:
+        """Return parsed command-line arguments.
+
+        Returns
+        -------
+        dict[str, Any]
+            Parsed arguments produced by argparse.
+        """
         return self._args
 
     @property
     def type_map(self) -> dict[str, type[Any]]:
+        """Return mapping from schema type names to Python types.
+
+        Returns
+        -------
+        dict[str, type[Any]]
+            Conversion map used while building argparse options.
+        """
         return self._type_map
 
     @property
     def config(self) -> dict[str, str]:
+        """Return application configuration values.
+
+        Returns
+        -------
+        dict[str, str]
+            Configuration loaded from the JSON config file.
+        """
         return self._config
 
     @property
     def input(self) -> list[dict[str, str]]:
+        """Return validated input prompt payloads.
+
+        Returns
+        -------
+        list[dict[str, str]]
+            List of prompt dictionaries.
+        """
         return self._input
 
     @property
     def function_definitions(self) -> list[dict[str, Any]]:
+        """Return validated function definition payloads.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            List of function schema dictionaries.
+        """
         return self._function_definitions
 
     def parse_args(self) -> dict[str, Any]:
+        """Parse command-line options from args.json specification.
+
+        Returns
+        -------
+        dict[str, Any]
+            Parsed argument namespace converted to a dictionary.
+        """
         args_config: dict[str, dict[str, Any]] = {}
         parser = argparse.ArgumentParser()
 
@@ -132,12 +213,33 @@ class IOManager(BaseModel):
         return self._args
 
     def get_config(self) -> dict[str, str]:
+        """Load global configuration from disk.
+
+        Returns
+        -------
+        dict[str, str]
+            Configuration dictionary.
+        """
         with open("./src/config/config.json") as config:
             self._config = json.load(config)
 
         return self._config
 
     def store_in_output(self, data: Any, mode: str = "w+") -> None:
+        """Write data to the configured output JSON file.
+
+        Parameters
+        ----------
+        data : Any
+            JSON-serializable payload to persist.
+        mode : str, default="w+"
+            File opening mode passed to ``open``.
+
+        Returns
+        -------
+        None
+            Writes serialized data to disk.
+        """
         output_values: Any = self.args.get("output")
         if not isinstance(output_values, list) or not output_values:
             raise ValueError("Missing output path in arguments")
@@ -153,6 +255,13 @@ class IOManager(BaseModel):
             output_file.write("\n")
 
     def get_input(self) -> list[dict[str, str]]:
+        """Load and validate prompt input items.
+
+        Returns
+        -------
+        list[dict[str, str]]
+            List of validated prompt dictionaries.
+        """
         input_values: Any = self.args.get("input")
         if not isinstance(input_values, list) or not input_values:
             raise ValueError("Missing input path in arguments")
@@ -170,6 +279,13 @@ class IOManager(BaseModel):
         return self._input
 
     def get_function_definitions(self) -> list[dict[str, Any]]:
+        """Load and validate function definition schemas.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            List of validated function schema dictionaries.
+        """
         fd_values: Any = self.args.get("function_definitions")
         if not isinstance(fd_values, list) or not fd_values:
             raise ValueError(
@@ -189,6 +305,13 @@ class IOManager(BaseModel):
         return self._function_definitions
 
     def get_function_definitions_context(self) -> str:
+        """Build textual context describing available functions.
+
+        Returns
+        -------
+        str
+            Multi-line context block consumed by prompting templates.
+        """
         context: list[str] = []
         for function in self.function_definitions:
             name = function.get("name")

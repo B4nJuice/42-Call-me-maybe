@@ -3,6 +3,13 @@ from .app.prompt_app import PromptApplication
 
 
 async def run() -> None:
+    """Run the prompt application entrypoint.
+
+    Returns
+    -------
+    None
+        This coroutine runs the application and returns when complete.
+    """
     application: PromptApplication = PromptApplication()
     await application.run()
 

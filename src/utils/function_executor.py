@@ -9,12 +9,26 @@ import io
 
 
 class FunctionExecutor(BaseModel):
+    """Load and execute user-defined functions from a Python module."""
+
     model_config = {"arbitrary_types_allowed": True}
 
     io_man: IOManager
     _functions: types.ModuleType = PrivateAttr()
 
     def model_post_init(self, __context: Any) -> None:
+        """Load the dynamic function module after model initialization.
+
+        Parameters
+        ----------
+        __context : Any
+            Pydantic post-init context.
+
+        Returns
+        -------
+        None
+            Populates the internal loaded module reference.
+        """
         function_path_values: Any = self.io_man.args.get("function_path")
         if (
             not isinstance(function_path_values, list)
@@ -42,6 +56,13 @@ class FunctionExecutor(BaseModel):
 
     @property
     def functions(self) -> types.ModuleType:
+        """Return the loaded module containing callable functions.
+
+        Returns
+        -------
+        types.ModuleType
+            Imported module object.
+        """
         return self._functions
 
     def execute_function(
@@ -49,6 +70,21 @@ class FunctionExecutor(BaseModel):
                 function_name: str,
                 params: dict[str, Any]
             ) -> dict[str, Any] | None:
+        """Execute a named function and capture stdout and return value.
+
+        Parameters
+        ----------
+        function_name : str
+            Attribute name of the function to call.
+        params : dict[str, Any]
+            Keyword arguments passed to the function.
+
+        Returns
+        -------
+        dict[str, Any] | None
+            Result payload with output and return value, or ``None`` when the
+            function cannot be resolved.
+        """
         output: io.StringIO = io.StringIO()
         try:
             target: Any = getattr(self.functions, function_name)

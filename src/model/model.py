@@ -8,22 +8,74 @@ from src.io.io_manager import IOManager
 
 
 class LLMProtocol(Protocol):
+    """Protocol describing the minimal LLM API consumed by the app."""
+
     def encode(self, text: str) -> Any:
+        """Encode text into token IDs.
+
+        Parameters
+        ----------
+        text : str
+            Input text to encode.
+
+        Returns
+        -------
+        Any
+            Backend-specific encoded representation.
+        """
         ...
 
     def decode(self, token_id: int) -> str:
+        """Decode a token ID into text.
+
+        Parameters
+        ----------
+        token_id : int
+            Token identifier to decode.
+
+        Returns
+        -------
+        str
+            Decoded text fragment.
+        """
         ...
 
     def get_logits_from_input_ids(self, input_ids: list[int]) -> list[float]:
+        """Compute logits from an input token sequence.
+
+        Parameters
+        ----------
+        input_ids : list[int]
+            Token IDs used as model context.
+
+        Returns
+        -------
+        list[float]
+            Logits for the next-token distribution.
+        """
         ...
 
 
 class LLMModel(BaseModel):
+    """Wrap the LLM SDK model and expose async prompt execution helpers."""
+
     model_name: str = "Qwen/Qwen3-0.6B"
     device: str | None = None
     _model: LLMProtocol = PrivateAttr()
 
     def model_post_init(self, __context: Any) -> None:
+        """Instantiate the underlying SDK model after initialization.
+
+        Parameters
+        ----------
+        __context : Any
+            Pydantic post-init context.
+
+        Returns
+        -------
+        None
+            Sets the internal SDK model instance.
+        """
         model_cls = getattr(llm_sdk, "Small_LLM_Model")
         self._model = cast(LLMProtocol, model_cls(
             model_name=self.model_name,
@@ -32,11 +84,32 @@ class LLMModel(BaseModel):
 
     @property
     def model(self) -> LLMProtocol:
+        """Return the instantiated low-level model adapter.
+
+        Returns
+        -------
+        LLMProtocol
+            Runtime model implementing encode/decode/logits APIs.
+        """
         return self._model
 
     async def get_prompt_response(
         self, prompt: str, io_man: IOManager
     ) -> "PromptExecutor":
+        """Create and schedule a prompt executor task.
+
+        Parameters
+        ----------
+        prompt : str
+            User prompt text.
+        io_man : IOManager
+            IO manager used for configuration and schemas.
+
+        Returns
+        -------
+        PromptExecutor
+            Configured executor with a running background task.
+        """
         prompt_executor: PromptExecutor = PromptExecutor(
             model=self.model,
             io_man=io_man,
@@ -49,6 +122,8 @@ class LLMModel(BaseModel):
 
 
 class PromptExecutor(BaseModel):
+    """Resolve function name/parameters for a prompt using token decoding."""
+
     model_config = {"arbitrary_types_allowed": True}
 
     model: Any
@@ -65,12 +140,31 @@ class PromptExecutor(BaseModel):
     task: asyncio.Task[Any] | None = None
 
     def _get_arg_first(self, key: str) -> Any:
+        """Return the first value for a parsed CLI argument key.
+
+        Parameters
+        ----------
+        key : str
+            Argument key to fetch.
+
+        Returns
+        -------
+        Any
+            First value associated with the requested key.
+        """
         values: Any = self.io_man.args.get(key)
         if not isinstance(values, list) or not values:
             raise ValueError(f"Missing argument: {key}")
         return values[0]
 
     def get_function_params(self) -> dict[str, str]:
+        """Generate raw function parameter values for the selected function.
+
+        Returns
+        -------
+        dict[str, str]
+            Parameter names mapped to decoded string values.
+        """
         params: dict[str, Any] = self.function_param_desc.get("parameters", {})
         params_list: str = "\n".join(
             f"{key}:type = {value.get('type')}"
@@ -131,6 +225,13 @@ class PromptExecutor(BaseModel):
         return result
 
     def get_function_name(self) -> str:
+        """Select the most likely function name for the current prompt.
+
+        Returns
+        -------
+        str
+            Predicted function name.
+        """
         fd_context: str = self.io_man.get_function_definitions_context()
 
         name_context_path: str | None = self.io_man.config.get("name_context")
@@ -176,6 +277,13 @@ class PromptExecutor(BaseModel):
         return result.replace('"', "").strip()
 
     def get_prompt_response(self) -> dict[str, Any]:
+        """Build the final function-calling response payload.
+
+        Returns
+        -------
+        dict[str, Any]
+            Response dictionary containing prompt, function, and parameters.
+        """
         self.function_name = self.get_function_name()
         try:
             self.function_param_desc = next(
@@ -202,6 +310,13 @@ class PromptExecutor(BaseModel):
         return self.prompt_response
 
     def format_params(self) -> None:
+        """Cast raw parameter strings to schema-defined Python types.
+
+        Returns
+        -------
+        None
+            Updates ``function_params`` in place with typed values.
+        """
         params_schema: dict[str, Any] = self.function_param_desc.get(
             "parameters", {}
         )

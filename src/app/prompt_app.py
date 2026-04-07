@@ -10,6 +10,8 @@ from src.utils.function_executor import FunctionExecutor
 
 
 class PromptApplication(BaseModel):
+    """Coordinate prompt processing, display, and function execution."""
+
     model_config = {"arbitrary_types_allowed": True}
 
     _io_manager: IOManager = PrivateAttr()
@@ -17,6 +19,18 @@ class PromptApplication(BaseModel):
     _function_executor: FunctionExecutor = PrivateAttr()
 
     def model_post_init(self, __context: Any) -> None:
+        """Initialize service dependencies after model creation.
+
+        Parameters
+        ----------
+        __context : Any
+            Pydantic post-init context.
+
+        Returns
+        -------
+        None
+            Initializes internal managers and executors.
+        """
         self._io_manager = IOManager()
 
         model_values: Any = self.io_manager.args.get("model")
@@ -42,17 +56,45 @@ class PromptApplication(BaseModel):
 
     @property
     def io_manager(self) -> IOManager:
+        """Return the configured IO manager.
+
+        Returns
+        -------
+        IOManager
+            The IO manager instance used by the application.
+        """
         return self._io_manager
 
     @property
     def llm_model(self) -> LLMModel:
+        """Return the language model wrapper.
+
+        Returns
+        -------
+        LLMModel
+            The model service used to generate prompt responses.
+        """
         return self._llm_model
 
     @property
     def function_executor(self) -> FunctionExecutor:
+        """Return the dynamic function executor.
+
+        Returns
+        -------
+        FunctionExecutor
+            Executor used to call user-provided functions.
+        """
         return self._function_executor
 
     async def run(self) -> None:
+        """Process all prompts and optionally execute resolved functions.
+
+        Returns
+        -------
+        None
+            Runs the main asynchronous processing loop.
+        """
         prompts: list[dict[str, str]] = list(self.io_manager.get_input())
         is_debug: bool = bool(self.io_manager.args.get("debug"))
         is_no_output: bool = bool(self.io_manager.args.get("no_output"))
@@ -163,6 +205,22 @@ class PromptApplication(BaseModel):
         responses: list[dict[str, Any] | None],
         tokens: list[int],
     ) -> None:
+        """Print debug details for each processed prompt.
+
+        Parameters
+        ----------
+        errors : list[str | None]
+            Error message per prompt, if any.
+        responses : list[dict[str, Any] | None]
+            Produced response payload per prompt.
+        tokens : list[int]
+            Token counts consumed per prompt.
+
+        Returns
+        -------
+        None
+            Writes formatted debug information to stdout.
+        """
         print()
         for idx in range(len(tokens)):
             if errors[idx] is not None:

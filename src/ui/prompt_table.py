@@ -4,6 +4,8 @@ from pydantic import BaseModel
 
 
 class PromptTableRenderer(BaseModel):
+    """Render prompt processing progress and function outputs in terminal."""
+
     prompt_texts: list[str]
     statuses: list[str] = ["pending"]
     tokens: list[int] = [0]
@@ -11,18 +13,70 @@ class PromptTableRenderer(BaseModel):
     rendered_lines: int = 0
 
     def model_post_init(self, __context: Any) -> None:
+        """Initialize mutable render state after model creation.
+
+        Parameters
+        ----------
+        __context : Any
+            Pydantic post-init context.
+
+        Returns
+        -------
+        None
+            Resets statuses, token counters, and render metadata.
+        """
         self.statuses = ["pending"] * len(self.prompt_texts)
         self.tokens = [0] * len(self.prompt_texts)
         self.results = [None] * len(self.prompt_texts)
         self.rendered_lines = 0
 
     def set_status(self, index: int, status: str) -> None:
+        """Set the status label for a prompt row.
+
+        Parameters
+        ----------
+        index : int
+            Row index in the prompt table.
+        status : str
+            New status value.
+
+        Returns
+        -------
+        None
+            Updates status in place.
+        """
         self.statuses[index] = status
 
     def set_token(self, index: int, token: int) -> None:
+        """Set the token counter for a prompt row.
+
+        Parameters
+        ----------
+        index : int
+            Row index in the prompt table.
+        token : int
+            Token count to display.
+
+        Returns
+        -------
+        None
+            Updates token count in place.
+        """
         self.tokens[index] = token
 
     def render(self, spin_char: str = "-") -> int:
+        """Print the full prompt status table.
+
+        Parameters
+        ----------
+        spin_char : str, default='-'
+            Character used to animate running rows.
+
+        Returns
+        -------
+        int
+            Number of terminal lines rendered.
+        """
         index_width: int = max(2, len(str(len(self.prompt_texts) - 1)))
         status_width: int = 10
         token_width: int = 6
@@ -94,6 +148,18 @@ class PromptTableRenderer(BaseModel):
         return self.rendered_lines
 
     def redraw(self, spin_char: str = "-") -> int:
+        """Clear and redraw the status table in place.
+
+        Parameters
+        ----------
+        spin_char : str, default='-'
+            Character used to animate running rows.
+
+        Returns
+        -------
+        int
+            Number of terminal lines rendered.
+        """
         print(f"\x1b[{self.rendered_lines}F", end="")
         for _ in range(self.rendered_lines):
             TerminalStyler.clear_current_line()
@@ -102,6 +168,18 @@ class PromptTableRenderer(BaseModel):
         return self.render(spin_char)
 
     def render_returns(self, returns: list[Any]) -> None:
+        """Render function execution return values in a summary table.
+
+        Parameters
+        ----------
+        returns : list[Any]
+            Execution results aligned with prompt indices.
+
+        Returns
+        -------
+        None
+            Prints the function returns table when data is available.
+        """
         rows: list[tuple[int, dict[str, Any]]] = [
             (idx, data)
             for idx, data in enumerate(returns)
@@ -206,6 +284,20 @@ class PromptTableRenderer(BaseModel):
 
     @staticmethod
     def _format_status(status: str, spin_char: str) -> str:
+        """Format a row status with optional spinner animation.
+
+        Parameters
+        ----------
+        status : str
+            Raw status label.
+        spin_char : str
+            Spinner character to append for running status.
+
+        Returns
+        -------
+        str
+            Display-ready status string.
+        """
         if status == "running":
             return f"running {spin_char}"
         return status
