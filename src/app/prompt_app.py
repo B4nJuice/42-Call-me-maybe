@@ -36,7 +36,6 @@ class PromptApplication(BaseModel):
     def function_executor(self) -> FunctionExecutor:
         return self._function_executor
 
-
     async def run(self) -> None:
         prompts: list[dict[str, str]] = list(self.io_manager.get_input())
         is_debug: bool = bool(self.io_manager.args.get("debug"))

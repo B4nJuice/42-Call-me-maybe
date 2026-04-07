@@ -4,7 +4,6 @@ from typing import Any, types
 import contextlib
 import importlib.util
 import io
-import os
 
 
 class FunctionExecutor(BaseModel):
@@ -15,7 +14,9 @@ class FunctionExecutor(BaseModel):
 
     def model_post_init(self, __context):
         function_path: str = self.io_man.args.get("function_path")[0]
-        spec = importlib.util.spec_from_file_location("functions", function_path)
+        spec = importlib.util.spec_from_file_location(
+                "functions", function_path
+            )
         self._functions = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.functions)
 

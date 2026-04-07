@@ -3,7 +3,13 @@ import json
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, PrivateAttr, TypeAdapter, field_validator
+from pydantic import (
+                        BaseModel,
+                        ConfigDict,
+                        PrivateAttr,
+                        TypeAdapter,
+                        field_validator
+                    )
 
 
 class InputItem(BaseModel):
@@ -47,7 +53,9 @@ class IOManager(BaseModel):
     )
     _config: dict[str, str] = PrivateAttr(default_factory=dict)
     _input: list[dict[str, str]] = PrivateAttr(default_factory=list)
-    _function_definitions: list[dict[str, Any]] = PrivateAttr(default_factory=list)
+    _function_definitions: list[dict[str, Any]] = PrivateAttr(
+            default_factory=list
+        )
 
     def model_post_init(self, __context: Any) -> None:
         self.parse_args()

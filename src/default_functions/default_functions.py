@@ -1,5 +1,6 @@
 import math
 
+
 def fn_add_numbers(a: float, b: float) -> float:
     raise Exception("Test exception")
     return a+b
