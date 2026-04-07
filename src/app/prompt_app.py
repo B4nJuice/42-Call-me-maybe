@@ -1,5 +1,6 @@
 import asyncio
 from typing import Any
+from pydantic import BaseModel, PrivateAttr
 
 from ..io.io_manager import IOManager
 from ..model.model import LLMModel
@@ -8,17 +9,32 @@ from ..utils.terminal import Colors, TerminalStyler
 from ..utils.function_executor import FunctionExecutor
 
 
-class PromptApplication:
-    def __init__(self) -> None:
-        self.io_manager: IOManager = IOManager()
-        self.io_manager.parse_args()
-        self.llm_model: LLMModel = LLMModel(
-                model_name=self.io_manager.args.get("model")[0],
-                device=self.io_manager.args.get("device")[0]
-            )
-        self.function_executor: FunctionExecutor = (
-                FunctionExecutor(io_man=self.io_manager)
-            )
+class PromptApplication(BaseModel):
+    model_config = {"arbitrary_types_allowed": True}
+
+    _io_manager: IOManager = PrivateAttr()
+    _llm_model: LLMModel = PrivateAttr()
+    _function_executor: FunctionExecutor = PrivateAttr()
+
+    def model_post_init(self, __context: Any) -> None:
+        self._io_manager = IOManager()
+        self._llm_model = LLMModel(
+            model_name=self.io_manager.args.get("model")[0],
+            device=self.io_manager.args.get("device")[0],
+        )
+        self._function_executor = FunctionExecutor(io_man=self.io_manager)
+
+    @property
+    def io_manager(self) -> IOManager:
+        return self._io_manager
+
+    @property
+    def llm_model(self) -> LLMModel:
+        return self._llm_model
+
+    @property
+    def function_executor(self) -> FunctionExecutor:
+        return self._function_executor
 
 
     async def run(self) -> None:

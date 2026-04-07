@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, TypeAdapter, field_validator
+from pydantic import BaseModel, ConfigDict, PrivateAttr, TypeAdapter, field_validator
 
 
 class InputItem(BaseModel):
@@ -32,23 +32,52 @@ class FunctionDefinition(BaseModel):
     returns: Parameter
 
 
-class IOManager:
-    def __init__(self) -> None:
-        self.args_config: dict[str, dict[str, Any]] = {}
-        self.args: dict[str, Any] = {}
-        self.type_map: dict[str, type[Any]] = {
+class IOManager(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    _args_config: dict[str, dict[str, Any]] = PrivateAttr(default_factory=dict)
+    _args: dict[str, Any] = PrivateAttr(default_factory=dict)
+    _type_map: dict[str, type[Any]] = PrivateAttr(
+        default_factory=lambda: {
             "integer": int,
             "float": float,
             "string": str,
             "boolean": bool,
         }
-        self.config: dict[str, str] = {}
-        self.input: list[dict[str, str]] = []
-        self.function_definitions: list[dict[str, Any]] = []
+    )
+    _config: dict[str, str] = PrivateAttr(default_factory=dict)
+    _input: list[dict[str, str]] = PrivateAttr(default_factory=list)
+    _function_definitions: list[dict[str, Any]] = PrivateAttr(default_factory=list)
+
+    def model_post_init(self, __context: Any) -> None:
         self.parse_args()
         self.get_config()
         self.get_input()
         self.get_function_definitions()
+
+    @property
+    def args_config(self) -> dict[str, dict[str, Any]]:
+        return self._args_config
+
+    @property
+    def args(self) -> dict[str, Any]:
+        return self._args
+
+    @property
+    def type_map(self) -> dict[str, type[Any]]:
+        return self._type_map
+
+    @property
+    def config(self) -> dict[str, str]:
+        return self._config
+
+    @property
+    def input(self) -> list[dict[str, str]]:
+        return self._input
+
+    @property
+    def function_definitions(self) -> list[dict[str, Any]]:
+        return self._function_definitions
 
     def parse_args(self) -> dict[str, Any]:
         args_config: dict[str, dict[str, Any]] = {}
@@ -85,15 +114,15 @@ class IOManager:
             else:
                 parser.add_argument(key, alias, **arg_kwargs)
 
-        self.args_config = args_config
-        self.args = vars(parser.parse_args())
-        return self.args
+        self._args_config = args_config
+        self._args = vars(parser.parse_args())
+        return self._args
 
     def get_config(self) -> dict[str, str]:
         with open("./src/config/config.json") as config:
-            self.config = json.load(config)
+            self._config = json.load(config)
 
-        return self.config
+        return self._config
 
     def store_in_output(self, data: Any, mode: str = "w+") -> None:
         output_path_str: str | None = self.args.get("output")[0]
@@ -114,8 +143,8 @@ class IOManager:
         adapter = TypeAdapter(list[InputItem])
         adapter.validate_python(data)
 
-        self.input = data
-        return self.input
+        self._input = data
+        return self._input
 
     def get_function_definitions(self) -> list[dict[str, Any]]:
         with open(self.args.get("function_definitions")[0]) as fd_file:
@@ -124,8 +153,8 @@ class IOManager:
         adapter = TypeAdapter(list[FunctionDefinition])
         adapter.validate_python(data)
 
-        self.function_definitions = data
-        return self.function_definitions
+        self._function_definitions = data
+        return self._function_definitions
 
     def get_function_definitions_context(self) -> str:
         context: list[str] = []

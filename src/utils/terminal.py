@@ -1,4 +1,5 @@
 from enum import Enum
+from pydantic import BaseModel
 
 
 class Colors(Enum):
@@ -11,7 +12,7 @@ class Colors(Enum):
     RED = "\033[31m"
 
 
-class TerminalStyler:
+class TerminalStyler(BaseModel):
     @staticmethod
     def clear_current_line() -> None:
         print("\x1b[2K\x1b[G", end="", flush=True)
