@@ -146,3 +146,14 @@ Additional controls:
 - Pydantic documentation: [Pydantic docs](https://docs.pydantic.dev/latest/)
 
 - Common Python documentation: [W3School](https://www.w3schools.com/python/default.asp) | [GFG](https://www.geeksforgeeks.org/python/python-programming-language-tutorial/) | [Official Python docs](https://docs.python.org/3/)
+  
+- Ai use in docstrings creation and README template.
+
+
+## Bonuses
+
+- Support other models (such as `charlottemeyer/s1.1-20250515_160200`)
+- Error recovery
+- UI with generation's visualization
+- Demonstration of encoding and decoding with constrained decoding
+- Function executor
