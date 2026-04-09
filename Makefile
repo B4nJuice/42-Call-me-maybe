@@ -1,4 +1,4 @@
-PROJECT_NAME	= Call_me_maybe
+PROJECT_NAME	= call_me_maybe
 VENV			= .venv
 PYTHON			= python3
 V_PYTHON		= $(VENV)/bin/$(PYTHON)
@@ -55,6 +55,6 @@ lint-strict: install
 	$(V_MYPY) $(SRCS) --strict
 
 debug: install
-	$(PYTHON) -m pdb $(MAIN_PROGRAM)
+	$(PYTHON) -m pdb -m src $(ARGS)
 
 .PHONY: run clean fclean install lint lint-strict remove-cache
