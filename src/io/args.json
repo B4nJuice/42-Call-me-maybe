@@ -17,7 +17,7 @@
 	},
 	"--output": {
 		"alias" : "-o",
-		"default": "./data/output/function_calls.json",
+		"default": "./data/output/function_calling_tests.json",
 		"type": "string",
 		"required": 0,
 		"action": "store",

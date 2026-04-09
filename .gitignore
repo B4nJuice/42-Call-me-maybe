@@ -7,3 +7,4 @@ moulinette(1).zip
 moulinette
 moulinette/*
 .mypy_cache
+data/output/function_calling_tests.json

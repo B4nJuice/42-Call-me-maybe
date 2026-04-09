@@ -15,6 +15,7 @@ async def run() -> None:
 
 
 if __name__ == "__main__":
+
     try:
         asyncio.run(run())
     except Exception as e:

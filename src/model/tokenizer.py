@@ -1,5 +1,6 @@
 import json
 from typing import Any
+import numpy as np
 from pydantic import BaseModel, PrivateAttr
 
 
@@ -60,9 +61,62 @@ class Tokenizer(BaseModel):
         for token in token_list:
             string: str = self.get_string(token)
             if string:
-                result += string.replace("ĠĊ", "\n").replace("Ġ", " ")
+                result += string
 
         return result
+
+    def get_constrained_token(
+                self,
+                logits: list[float],
+                mask: str
+            ) -> int:
+        if not mask:
+            return int(np.argmax(np.asarray(logits)))
+
+        allowed_chars: set[str] = set(mask)
+        sorted_ids: np.ndarray[Any, Any] = np.argsort(np.asarray(logits))[::-1]
+
+        for token_id in sorted_ids:
+            token: int = int(token_id)
+            decoded: str | None = self.get_string(token)
+            if not decoded:
+                continue
+            if all(char in allowed_chars for char in decoded):
+                return token
+
+        return int(np.argmax(np.asarray(logits)))
+
+    def get_next_token_from_possible_outputs(
+                self,
+                logits: list[float],
+                current_tokens: list[int],
+                possible_outputs_tokens: list[list[int]]
+            ) -> int:
+        possible_next_tokens: set[int] = set()
+        current_len: int = len(current_tokens)
+
+        matching_outputs: list[list[int]] = []
+        for output_tokens in possible_outputs_tokens:
+            if output_tokens[:current_len] != current_tokens:
+                continue
+            matching_outputs.append(output_tokens)
+
+        if not matching_outputs:
+            raise ValueError(
+                "No possible output starts with current_tokens."
+            )
+
+        for output_tokens in matching_outputs:
+            if len(output_tokens) <= current_len:
+                continue
+            possible_next_tokens.add(output_tokens[current_len])
+
+        if not possible_next_tokens:
+            raise ValueError(
+                "No next token available for current_tokens prefix."
+            )
+
+        return max(possible_next_tokens, key=lambda token_id: logits[token_id])
 
     def get_token(self, string: str) -> int | None:
         normalized: str = string.replace("\n", "ĠĊ").replace(" ", "Ġ")
@@ -72,5 +126,6 @@ class Tokenizer(BaseModel):
 
     def get_string(self, token: int) -> str | None:
         if token not in self.string_cache:
-            self.string_cache[token] = self.token_vocab.get(token)
+            self.string_cache[token] = self.token_vocab.get(token).replace(
+                "ĠĊ", "\n").replace("Ġ", " ").replace("Ċ", "\"")
         return self.string_cache[token]

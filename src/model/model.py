@@ -1,12 +1,13 @@
 import asyncio
-from typing import Any, Protocol, cast
+import string
+from typing import Any, Protocol, cast, runtime_checkable
 from pydantic import BaseModel, PrivateAttr
 import llm_sdk
-import numpy as np
 
 from src.io.io_manager import IOManager
 
 
+@runtime_checkable
 class LLMProtocol(Protocol):
     """Protocol describing the minimal LLM API consumed by the app."""
 
@@ -61,6 +62,7 @@ class LLMModel(BaseModel):
 
     model_name: str = "Qwen/Qwen3-0.6B"
     device: str | None = None
+    _tokenizer: Any = PrivateAttr()
     _model: LLMProtocol = PrivateAttr()
 
     def model_post_init(self, __context: Any) -> None:
@@ -81,6 +83,12 @@ class LLMModel(BaseModel):
             model_name=self.model_name,
             device=self.device
         ))
+        from src.model.tokenizer import Tokenizer
+        self._tokenizer = Tokenizer(model=self._model)
+
+    @property
+    def tokenizer(self) -> Any:
+        return self._tokenizer
 
     @property
     def model(self) -> LLMProtocol:
@@ -112,6 +120,7 @@ class LLMModel(BaseModel):
         """
         prompt_executor: PromptExecutor = PromptExecutor(
             model=self.model,
+            tokenizer=self.tokenizer,
             io_man=io_man,
             prompt=prompt
         )
@@ -126,7 +135,8 @@ class PromptExecutor(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
-    model: Any
+    model: LLMProtocol
+    tokenizer: Any
     io_man: IOManager
     prompt: str
 
@@ -190,7 +200,8 @@ class PromptExecutor(BaseModel):
             params_format=params_format,
         )
 
-        token_context: list[int] = self.model.encode(rule_context).tolist()[0]
+        token_context: list[int] = self.model.encode(
+            rule_context).tolist()[0]
 
         token_prompt: list[int] = self.model.encode(
             f"Input= {self.prompt} \nFunction= \"{self.function_name}\"\n"
@@ -199,22 +210,30 @@ class PromptExecutor(BaseModel):
         result: dict[str, str] = {}
 
         for key in params.keys():
-            token_key: list[int] = self.model.encode(f"{key}=\"").tolist()[0]
-            token_prompt += token_key
+            param_type: str | None = None
+            if isinstance(params.get(key), dict):
+                param_type = params[key].get("type")
+            param_mask: str = self._get_param_mask(param_type)
 
             param_buffer: str = ""
+
+            token_key: list[int] = self.model.encode(
+                f"{key}=\"").tolist()[0]
+            token_prompt += token_key
+
             while '"' not in param_buffer:
                 logits: list[float] = self.model.get_logits_from_input_ids(
                     token_context + token_prompt
                 )
-                logits_arr = np.asarray(logits)
-                next_id: int = int(np.argmax(logits_arr))
+                next_id: int = self.tokenizer.get_constrained_token(
+                    logits, param_mask
+                )
                 token_prompt.append(next_id)
-                next_text: str = self.model.decode(next_id)
+                next_text: str = self.tokenizer.decode(next_id)
                 param_buffer += next_text.replace("\n", "")
 
                 self.token += 1
-                max_token_value: Any = self._get_arg_first("max_token")
+                max_token_value: str = self._get_arg_first("max_token")
                 max_token = int(max_token_value)
                 if self.token > max_token:
                     raise ValueError(
@@ -223,6 +242,17 @@ class PromptExecutor(BaseModel):
             result[key] = param_buffer.split('"', maxsplit=1)[0].strip()
 
         return result
+
+    def _get_param_mask(self, param_type: str | None) -> str:
+        if param_type in {"number", "integer"}:
+            return "0123456789.\""
+
+        return (
+            string.ascii_letters
+            + string.digits
+            + string.punctuation
+            + " "
+        )
 
     def get_function_name(self) -> str:
         """Select the most likely function name for the current prompt.
@@ -243,12 +273,22 @@ class PromptExecutor(BaseModel):
 
         rule_context = rule_context.format(fd_context=fd_context)
 
-        token_context: list[int] = self.model.encode(rule_context).tolist()[0]
+        token_context: list[int] = self.model.encode(
+            rule_context).tolist()[0]
 
         token_prompt: list[int] = self.model.encode(
             f"Input= {self.prompt} \nFunction= \""
         ).tolist()[0]
         result: str = ""
+        generated_name_tokens: list[int] = []
+
+        possible_name_outputs_tokens: list[list[int]] = []
+        for fd in self.io_man.function_definitions:
+            function_name: Any = fd.get("name")
+            if isinstance(function_name, str):
+                possible_name_outputs_tokens.append(
+                    self.model.encode(f'{function_name}"').tolist()[0]
+                )
 
         name_logits: list[float] = []
 
@@ -256,15 +296,24 @@ class PromptExecutor(BaseModel):
             logits: list[float] = self.model.get_logits_from_input_ids(
                 token_context + token_prompt
             )
-            logits_arr = np.asarray(logits)
-            max_logit: float = float(np.max(logits_arr))
-            name_logits.append(max_logit)
-            next_id: int = int(np.argmax(logits_arr))
+            next_id: int = self.tokenizer.get_next_token_from_possible_outputs(
+                logits,
+                generated_name_tokens,
+                possible_name_outputs_tokens
+            )
+            name_logits.append(logits[next_id])
+            generated_name_tokens.append(next_id)
             token_prompt.append(next_id)
-            next_text: str = self.model.decode(next_id)
+            next_text: str = self.tokenizer.decode(next_id)
             result += next_text
 
             self.token += 1
+            max_token_value: str = self._get_arg_first("max_token")
+            max_token = int(max_token_value)
+            if self.token > max_token:
+                raise ValueError(
+                    "Response failed to respond in max-token."
+                )
 
         self.avg_logits = sum(name_logits) / self.token
         confidence_value: Any = self._get_arg_first("confidence")
