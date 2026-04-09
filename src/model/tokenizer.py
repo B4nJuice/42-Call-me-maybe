@@ -129,7 +129,7 @@ class Tokenizer(BaseModel):
             token_list = [token_list]
 
         for token in token_list:
-            string: str = self.get_string(token)
+            string: str | None = self.get_string(token)
             if string:
                 result += string
 
@@ -256,6 +256,9 @@ class Tokenizer(BaseModel):
             Decoded string fragment, if available in the vocabulary.
         """
         if token not in self.string_cache:
-            self.string_cache[token] = self.token_vocab.get(token).replace(
-                "ĠĊ", "\n").replace("Ġ", " ").replace("Ċ", "\"")
+            string: str | None = self.token_vocab.get(token)
+            if string:
+                string = string.replace(
+                    "ĠĊ", "\n").replace("Ġ", " ").replace("Ċ", "\"")
+            self.string_cache[token] = string
         return self.string_cache[token]
