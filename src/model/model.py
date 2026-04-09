@@ -88,6 +88,13 @@ class LLMModel(BaseModel):
 
     @property
     def tokenizer(self) -> Any:
+        """Return the tokenizer helper bound to the loaded model.
+
+        Returns
+        -------
+        Any
+            Tokenizer instance used for encoding, decoding, and constraints.
+        """
         return self._tokenizer
 
     @property
@@ -244,6 +251,18 @@ class PromptExecutor(BaseModel):
         return result
 
     def _get_param_mask(self, param_type: str | None) -> str:
+        """Build an allowed-character mask based on parameter schema type.
+
+        Parameters
+        ----------
+        param_type : str | None
+            JSON-schema-like type for the target parameter.
+
+        Returns
+        -------
+        str
+            Characters permitted during constrained decoding.
+        """
         if param_type in {"number", "integer"}:
             return "0123456789.\""
 
