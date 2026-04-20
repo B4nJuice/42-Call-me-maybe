@@ -154,6 +154,8 @@ Additional controls:
 
 - Support other models (such as `charlottemeyer/s1.1-20250515_160200`)
 - Error recovery
+- Custom tokenizer (encode and decode)
+- Caching optimisation
 - UI with generation's visualization
 - Demonstration of encoding and decoding with constrained decoding
 - Function executor
