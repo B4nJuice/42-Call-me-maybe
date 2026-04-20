@@ -37,14 +37,11 @@ fclean: clean
 remove-cache:
 	rm -rf $(UV_CACHE_DIR)
 
-install: $(VENV)
+install:
 	$(UV) sync --project $(LLM_DIR) --cache-dir $(UV_CACHE_DIR)
 	$(UV) build --project $(LLM_DIR) --cache-dir $(UV_CACHE_DIR)
 	mv $(LLM_LIB_PATH) $(LIBS)/
 	$(UV) sync --cache-dir $(UV_CACHE_DIR)
-
-$(VENV):
-	$(PYTHON) -m venv $(VENV)
 
 lint: install
 	$(V_FLAKE) $(SRCS)
