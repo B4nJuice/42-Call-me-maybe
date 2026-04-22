@@ -61,7 +61,7 @@ The project uses a constrained decoding workflow in two stages:
 1. **Function name selection**
    - The model receives a context prompt listing all available functions (name, description, parameters, return type).
    - Decoding starts from a fixed pattern (`Function= "`) and continues token by token.
-   - At each step, the next token is selected with greedy decoding (`argmax` on logits).
+   - At each step, the next token is selected with constrained decoding (`argmax` on logits).
    - Generation stops only when the closing quote is produced, which constrains output to a single function-name string.
 
 2. **Parameter generation**
@@ -79,7 +79,7 @@ Additional controls:
 
 - **Schema-first design**: function definitions and input payloads are validated early with Pydantic models.
 - **Two-pass decoding**: function name first, then parameters, to reduce ambiguity and simplify validation.
-- **Greedy decoding**: deterministic and easy to debug for constrained outputs.
+- **Argument injection**: also known as prefix constrained decoding.
 - **Separation of concerns**:
   - `IOManager` handles arguments, config, and files.
   - `LLMModel` / `PromptExecutor` handle inference and decoding logic.
@@ -90,7 +90,7 @@ Additional controls:
 ## Performance analysis
 
 - **Accuracy**
-  - Strongly depends on prompt templates and function-definition quality.
+  - Constrained decoding provide nice output for specific format (int, bool, etc...) 
   - Constrained output format improves structural correctness (valid keys/types) compared with free-form generation.
 
 - **Speed**
